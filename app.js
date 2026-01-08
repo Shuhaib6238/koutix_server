@@ -14,8 +14,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 const authRoutes = require('./routes/auth.routes');
+const storeRoutes = require('./routes/store.routes');
+const path = require('path');
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/auth', authRoutes);
+app.use('/store', storeRoutes);
 
 app.get('/', (req, res) => {
   res.send('Koutix Server is running');
