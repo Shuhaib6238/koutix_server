@@ -29,7 +29,7 @@ class AdminService {
 
       // 3. Create Store
       const newStore = new Store({
-        name: storeName,
+        storeName: storeName,
         owner: newUser._id,
       });
       await newStore.save();
