@@ -13,15 +13,19 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Static folder for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Routes
 const authRoutes = require('./routes/auth.routes');
-const storeRoutes = require('./routes/store.routes');
 const adminRoutes = require('./routes/admin.routes');
+const storeRoutes = require('./routes/stores.routes');
+const usersRoutes = require('./routes/users.routes');
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/auth', authRoutes);
-app.use('/store', storeRoutes);
-app.use('/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/stores', storeRoutes);
+app.use('/api/users', usersRoutes);
 
 app.get('/', (req, res) => {
   res.send('Koutix Server is running');

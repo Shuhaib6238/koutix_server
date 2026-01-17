@@ -1,41 +1,35 @@
 const mongoose = require('mongoose');
 
 const StoreSchema = new mongoose.Schema({
-  owner: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    unique: true // One store per user for now
-  },
   storeName: {
     type: String,
     required: true,
-    trim: true,
-    unique: true
-  },
-  email: {
-    type: String,
-    trim: true,
-    lowercase: true
-  },
-  phone: {
-    type: String,
     trim: true
+  },
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   address: {
     type: String,
     trim: true
   },
-  logoUrl: {
-    type: String
+  phone: {
+    type: String,
+    trim: true
+  },
+  logo: {
+    type: String, // URL or path to the logo image
+    default: null
   },
   primaryColor: {
     type: String,
-    default: '#000000'
+    default: '#000000' // Default black
   },
   secondaryColor: {
     type: String,
-    default: '#ffffff'
+    default: '#ffffff' // Default white
   },
   isActive: {
     type: Boolean,

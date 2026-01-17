@@ -1,16 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const userController = require('../controllers/users.controller');
+const storeController = require('../controllers/stores.controller');
 const multer = require('multer');
 const path = require('path');
 
-// Configure multer for profile image uploads
+// Configure multer for logo uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
-    cb(null, `profile-${Date.now()}${path.extname(file.originalname)}`);
+    cb(null, `logo-${Date.now()}${path.extname(file.originalname)}`);
   }
 });
 
@@ -28,9 +28,8 @@ const upload = multer({
   }
 });
 
-// Profile routes
-router.get('/profile/:id', userController.getProfile);
-router.put('/profile/:id', userController.updateProfile);
-router.post('/profile/:id/image', upload.single('image'), userController.uploadProfileImage);
+router.get('/:id', storeController.getStore);
+router.put('/:id', storeController.updateStore);
+router.post('/:id/logo', upload.single('logo'), storeController.uploadLogo);
 
 module.exports = router;
