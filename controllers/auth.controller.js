@@ -1,16 +1,132 @@
-const authService = require("../services/auth.service");
+const User = require('../models/user.model');
+const Invitation = require('../models/invitation.model');
+const Branch = require('../models/branch.model');
+const Organization = require('../models/organization.model');
+const admin = require('../config/firebase');
+const jwtService = require('../services/jwt.service');
+const mongoose = require('mongoose');
 
 class AuthController {
-  async signup(req, res) {
+  async verifyInvitation(req, res) {
     try {
-      const { email, password, displayName } = req.body;
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ message: "Email and password are required" });
+      const { token } = req.query;
+      if (!token) {
+        return res.status(400).json({ message: 'Token is required' });
       }
-      const user = await authService.signup(email, password, displayName);
-      res.status(201).json({ message: "User created successfully", user });
+
+      const invitation = await Invitation.findOne({ token, status: 'pending' });
+      if (!invitation) {
+        return res.status(404).json({ message: 'Invalid or expired invitation' });
+      }
+
+      if (invitation.expiresAt < new Date()) {
+        invitation.status = 'expired';
+        await invitation.save();
+        return res.status(400).json({ message: 'Invitation has expired' });
+      }
+
+      res.status(200).json({ message: 'Invitation is valid', invitation });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async completeOnboarding(req, res) {
+    try {
+      const { token, password, displayName } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ message: 'Token and password are required' });
+      }
+
+      const invitation = await Invitation.findOne({ token, status: 'pending' });
+      if (!invitation || invitation.expiresAt < new Date()) {
+        return res.status(400).json({ message: 'Invalid or expired invitation' });
+      }
+
+      // 1. Create user in Firebase
+      const userRecord = await admin.auth().createUser({
+        email: invitation.email,
+        password,
+        displayName,
+      });
+
+      // 2. Create user in MongoDB
+      const user = new User({
+        firebaseUid: userRecord.uid,
+        email: invitation.email,
+        displayName: displayName || invitation.email,
+        role: invitation.role,
+        org_id: invitation.org_id,
+        branch_id: invitation.branch_id,
+        status: 'active'
+      });
+      await user.save();
+
+      // 3. Update branch manager if role is BranchManager
+      if (invitation.role === 'BranchManager') {
+        await Branch.findByIdAndUpdate(invitation.branch_id, { manager_id: user._id });
+      }
+
+      // 4. Mark invitation as accepted
+      invitation.status = 'accepted';
+      await invitation.save();
+
+      // 5. Generate JWT
+      const jwtToken = jwtService.sign({ id: user._id, role: user.role });
+
+      res.status(201).json({ message: 'Onboarding complete', user, token: jwtToken });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async signupChainManager(req, res) {
+    try {
+      const { email, password, displayName, organizationName } = req.body;
+
+      if (!email || !password || !organizationName) {
+        return res.status(400).json({ message: 'Email, password, and organization name are required' });
+      }
+
+      // 1. Create user in Firebase
+      const userRecord = await admin.auth().createUser({
+        email,
+        password,
+        displayName,
+      });
+
+      const userId = new mongoose.Types.ObjectId();
+
+      // 2. Create organization
+      const organization = new Organization({
+        name: organizationName,
+        owner_id: userId,
+      });
+      await organization.save();
+
+      // 3. Create user in MongoDB with status 'pending'
+      const user = new User({
+        _id: userId,
+        firebaseUid: userRecord.uid,
+        email: userRecord.email,
+        displayName: userRecord.displayName,
+        role: 'ChainManager',
+        org_id: organization._id,
+        status: 'pending'
+      });
+      await user.save();
+
+      res.status(201).json({ 
+        message: 'Signup successful. Please wait for SuperAdmin approval.', 
+        user: {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+          status: user.status
+        }, 
+        organization 
+      });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
@@ -18,16 +134,48 @@ class AuthController {
 
   async login(req, res) {
     try {
-      const { email, password } = req.body;
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ message: "Email and password are required" });
+      const { idToken } = req.body; // Firebase ID Token from frontend
+      if (!idToken) {
+        return res.status(400).json({ message: 'Firebase ID Token is required' });
       }
-      const data = await authService.login(email, password);
-      res.status(200).json(data);
+
+      // 1. Verify Firebase Token
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const { uid, email } = decodedToken;
+
+      // 2. Find user in MongoDB
+      const user = await User.findOne({ firebaseUid: uid });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      if (user.status !== 'active') {
+        return res.status(403).json({ message: 'Account is not active' });
+      }
+
+      // 3. Generate JWT
+      const jwtToken = jwtService.sign({ id: user._id, role: user.role });
+
+      res.status(200).json({ user, token: jwtToken });
     } catch (error) {
-      res.status(401).json({ message: error.message });
+      res.status(401).json({ message: 'Invalid token', error: error.message });
+    }
+  }
+
+  async forgotPassword(req, res) {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      const link = await admin.auth().generatePasswordResetLink(email);
+      
+      console.log(`Password reset link for ${email}: ${link}`);
+
+      res.status(200).json({ message: 'Password reset link generated successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
     }
   }
 }

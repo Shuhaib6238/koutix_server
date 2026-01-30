@@ -28,7 +28,12 @@ const upload = multer({
   }
 });
 
+const authMiddleware = require('../middlewares/auth.middleware');
+
 // Profile routes
+router.get('/me', authMiddleware, (req, res) => {
+  res.json({ user: req.user });
+});
 router.get('/profile/:id', userController.getProfile);
 router.put('/profile/:id', userController.updateProfile);
 router.post('/profile/:id/image', upload.single('image'), userController.uploadProfileImage);

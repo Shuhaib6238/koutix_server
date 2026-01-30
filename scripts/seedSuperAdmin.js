@@ -42,10 +42,16 @@ const seedSuperAdmin = async () => {
         email: SUPERADMIN_EMAIL,
         role: "SuperAdmin", 
         displayName: SUPERADMIN_USERNAME,
-        isActive: true
+        status: "active"
       });
       console.log("✅ Super Admin inserted into MongoDB:", dbUser._id);
     } else {
+      // Update existing user to ensure status is correct
+      if (dbUser.status !== 'active') {
+        dbUser.status = 'active';
+        await dbUser.save();
+        console.log("✅ Updated Super Admin status to 'active'");
+      }
       console.log("ℹ️ Super Admin already exists in MongoDB:", dbUser._id);
     }
 
