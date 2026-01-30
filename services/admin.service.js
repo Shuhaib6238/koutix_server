@@ -2,6 +2,7 @@ const admin = require("../config/firebase");
 const User = require("../models/user.model");
 const Store = require("../models/store.model");
 const authService = require("./auth.service");
+const jwtService = require("./jwt.service");
 
 class AdminService {
   async signup(storeName, email, password) {
@@ -69,10 +70,14 @@ class AdminService {
     // 3. Get store info
     const store = await Store.findOne({ owner: user._id });
 
+    // 4. Generate custom JWT for internal API authorization
+    const token = jwtService.sign({ id: user._id, role: user.role });
+
     return {
       ...firebaseAuthResponse,
       user,
       store,
+      token,
     };
   }
 }

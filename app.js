@@ -18,12 +18,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 const authRoutes = require('./routes/auth.routes');
-const adminRoutes = require('./routes/admin.routes');
+const superAdminRoutes = require('./routes/superadmin.routes');
+const chainRoutes = require('./routes/chain.routes');
 const storeRoutes = require('./routes/stores.routes');
 const usersRoutes = require('./routes/users.routes');
 
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/superadmin', superAdminRoutes);
+app.use('/api/chain', chainRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/users', usersRoutes);
 

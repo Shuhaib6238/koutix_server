@@ -20,12 +20,13 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin', 'store_manager', 'partner'],
+    enum: ['SuperAdmin', 'ChainManager', 'BranchManager', 'user', 'admin', 'store_manager', 'partner'],
     default: 'user'
   },
-  isActive: {
-    type: Boolean,
-    default: true
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'inactive'],
+    default: 'pending'
   },
   phoneNumber: {
     type: String,

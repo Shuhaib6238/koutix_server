@@ -3,7 +3,10 @@ const authController = require('../controllers/auth.controller');
 
 const router = express.Router();
 
-router.post('/signup', authController.signup);
+router.get('/verify-invitation', authController.verifyInvitation);
+router.post('/complete-onboarding', authController.completeOnboarding);
+router.post('/signup-chain-manager', authController.signupChainManager);
 router.post('/login', authController.login);
+router.post('/forgot-password', authController.forgotPassword);
 
 module.exports = router;
