@@ -83,34 +83,63 @@ class AuthController {
 
   async signupChainManager(req, res) {
     try {
-      const { email, password, displayName, organizationName } = req.body;
+      const { 
+        email, 
+        password, 
+        fullName, 
+        phone, 
+        chainName, 
+        vatTrn, 
+        hqAddress, 
+        tradeLicense, 
+        logoUrl, 
+        primaryColor, 
+        expectedBranchCount, 
+        posSystem 
+      } = req.body;
 
-      if (!email || !password || !organizationName) {
-        return res.status(400).json({ message: 'Email, password, and organization name are required' });
+      if (!email || !password || !chainName) {
+        return res.status(400).json({ message: 'Email, password, and chain name are required' });
       }
 
-      // 1. Create user in Firebase
+      // 1. Domain Validation
+      const domain = email.split("@")[1];
+      const domainWhitelist = ["nesto.ae", "lulucompany.com"];
+      if (!domainWhitelist.includes(domain)) {
+        return res.status(403).json({ message: `Email domain ${domain} is not authorized for Chain Manager signup.` });
+      }
+
+      // 2. Create user in Firebase
       const userRecord = await admin.auth().createUser({
         email,
         password,
-        displayName,
+        displayName: fullName,
+        phoneNumber: phone
       });
 
       const userId = new mongoose.Types.ObjectId();
 
-      // 2. Create organization
+      // 3. Create organization with retail fields
       const organization = new Organization({
-        name: organizationName,
+        name: chainName,
+        vat_trn: vatTrn,
+        hq_address: hqAddress,
+        trade_license: tradeLicense,
+        logo_url: logoUrl,
+        primary_color: primaryColor || '#FF6B35',
+        expected_branch_count: expectedBranchCount || 1,
+        pos_system: posSystem || 'Custom',
         owner_id: userId,
       });
       await organization.save();
 
-      // 3. Create user in MongoDB with status 'pending'
+      // 4. Create user in MongoDB with status 'pending'
       const user = new User({
         _id: userId,
         firebaseUid: userRecord.uid,
         email: userRecord.email,
-        displayName: userRecord.displayName,
+        displayName: fullName,
+        phoneNumber: phone,
         role: 'ChainManager',
         org_id: organization._id,
         status: 'pending'

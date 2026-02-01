@@ -25,6 +25,25 @@ const BranchSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'inactive'],
     default: 'active'
+  },
+  branch_id: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  location: {
+    lat: { type: Number },
+    lng: { type: Number }
+  },
+  pos_api_key: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  manager_email: {
+    type: String,
+    trim: true,
+    lowercase: true
   }
 }, {
   timestamps: true

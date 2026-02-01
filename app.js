@@ -22,12 +22,14 @@ const superAdminRoutes = require('./routes/superadmin.routes');
 const chainRoutes = require('./routes/chain.routes');
 const storeRoutes = require('./routes/stores.routes');
 const usersRoutes = require('./routes/users.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/chain', chainRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('Koutix Server is running');

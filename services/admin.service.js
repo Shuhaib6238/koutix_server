@@ -63,8 +63,12 @@ class AdminService {
       throw new Error("User not found");
     }
 
-    if (user.role !== "admin" && user.role !== "SuperAdmin") {
+    if (user.role !== "admin" && user.role !== "SuperAdmin" && user.role !== "ChainManager" && user.role !== "BranchManager") {
       throw new Error("Access denied. Admin privileges required.");
+    }
+
+    if (user.status !== "active") {
+      throw new Error("Account is pending approval. Please contact SuperAdmin.");
     }
 
     // 3. Get store info
