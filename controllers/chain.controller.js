@@ -6,18 +6,26 @@ const crypto = require('crypto');
 class ChainController {
   async createBranch(req, res) {
     try {
-      const { name, address, managerEmail } = req.body;
-      const org_id = req.user?.org_id || null; // Optional: use user's org_id if available
+      const { name, location, managerEmail } = req.body;
+      const org_id = req.user?.org_id || null;
 
-      if (!name || !address) {
-        return res.status(400).json({ message: 'Branch name and address are required' });
+      if (!name || !location) {
+        return res.status(400).json({ message: 'Branch name and location are required' });
       }
 
-      // 1. Create branch
+      // 1. Generate branch_id and pos_api_key
+      const branch_id = `BR${Math.floor(1000 + Math.random() * 9000)}`;
+      const pos_api_key = crypto.randomBytes(16).toString('hex');
+
+      // 2. Create branch
       const branch = new Branch({
         org_id,
         name,
-        address
+        address: req.body.address || 'N/A', // Assuming address might be optional if location is provided
+        location,
+        branch_id,
+        pos_api_key,
+        manager_email: managerEmail
       });
       await branch.save();
 
@@ -38,17 +46,21 @@ class ChainController {
         });
         await invitation.save();
 
-        // 3. Send email notification (logged to console for now)
+        // 3. Send email notification (personalized template)
         const invitationLink = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/onboarding?token=${token}`;
         
         console.log(`
 ========================================
-Branch Manager Invitation
+✅ Your ${name} branch is ready on Koutix
 ========================================
-To: ${managerEmail}
-Branch: ${name}
-Link: ${invitationLink}
-Token: ${token}
+Hi,
+
+Your ${org_id ? 'HQ' : 'Admin'} added your ${name} branch. 
+Click here to set password: ${invitationLink}
+
+Branch: ${name} | ID: ${branch_id} | API Key: ${pos_api_key}
+
+Follow the link to get started.
 ========================================
         `);
       }
