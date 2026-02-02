@@ -83,31 +83,31 @@ class AuthController {
 
   async signupChainManager(req, res) {
     try {
-      const { 
-        email, 
-        password, 
-        fullName, 
-        phone, 
-        chainName, 
-        vatTrn, 
-        hqAddress, 
-        tradeLicense, 
-        logoUrl, 
-        primaryColor, 
-        expectedBranchCount, 
-        posSystem 
+      const {
+        email,
+        password,
+        fullName,
+        phone,
+        chainName,
+        vatTrn,
+        hqAddress,
+        tradeLicense,
+        logoUrl,
+        primaryColor,
+        expectedBranchCount,
+        posSystem
       } = req.body;
 
       if (!email || !password || !chainName) {
         return res.status(400).json({ message: 'Email, password, and chain name are required' });
       }
 
-      // 1. Domain Validation
-      const domain = email.split("@")[1];
-      const domainWhitelist = ["nesto.ae", "lulucompany.com"];
-      if (!domainWhitelist.includes(domain)) {
-        return res.status(403).json({ message: `Email domain ${domain} is not authorized for Chain Manager signup.` });
-      }
+      // 1. Domain Validation removed as per user request
+      // const domain = email.split("@")[1];
+      // const domainWhitelist = ["nesto.ae", "lulucompany.com", "gmail.com", "outlook.com", "yopmail.com"];
+      // if (!domainWhitelist.includes(domain)) {
+      //   return res.status(403).json({ message: `Email domain ${domain} is not authorized for Chain Manager signup.` });
+      // }
 
       // 2. Create user in Firebase
       const userRecord = await admin.auth().createUser({
@@ -146,15 +146,15 @@ class AuthController {
       });
       await user.save();
 
-      res.status(201).json({ 
-        message: 'Signup successful. Please wait for SuperAdmin approval.', 
+      res.status(201).json({
+        message: 'Signup successful. Please wait for SuperAdmin approval.',
         user: {
           id: user._id,
           email: user.email,
           role: user.role,
           status: user.status
-        }, 
-        organization 
+        },
+        organization
       });
     } catch (error) {
       res.status(400).json({ message: error.message });
@@ -199,7 +199,7 @@ class AuthController {
       }
 
       const link = await admin.auth().generatePasswordResetLink(email);
-      
+
       console.log(`Password reset link for ${email}: ${link}`);
 
       res.status(200).json({ message: 'Password reset link generated successfully' });
