@@ -109,12 +109,11 @@ class AuthController {
       //   return res.status(403).json({ message: `Email domain ${domain} is not authorized for Chain Manager signup.` });
       // }
 
-      // 2. Create user in Firebase
+      // 2. Create user in Firebase (Phone number validation is skipped in Firebase to allow custom formats)
       const userRecord = await admin.auth().createUser({
         email,
         password,
         displayName: fullName,
-        phoneNumber: phone
       });
 
       const userId = new mongoose.Types.ObjectId();
