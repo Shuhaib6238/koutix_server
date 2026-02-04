@@ -162,6 +162,7 @@ class AuthController {
 
   async signupBranchManager(req, res) {
     try {
+<<<<<<< Updated upstream
       const { 
         email, 
         password, 
@@ -169,6 +170,15 @@ class AuthController {
         branchName, 
         address,
         phoneNumber,
+=======
+      const {
+        email,
+        password,
+        fullName,
+        phoneNumber,
+        branchName,
+        address,
+>>>>>>> Stashed changes
         vatTrn,
         tradeLicense,
         logoUrl,
@@ -177,6 +187,7 @@ class AuthController {
         posSystem
       } = req.body;
 
+<<<<<<< Updated upstream
       if (!email || !password || !branchName) {
         return res.status(400).json({ message: 'Email, password, and branch name are required' });
       }
@@ -203,11 +214,49 @@ class AuthController {
           owner_id: userId,
           hq_address: address,
           vat_trn: vatTrn,
+=======
+      if (!email || !password || !branchName || !address) {
+        return res.status(400).json({ message: 'Email, password, branch name, and address are required' });
+      }
+
+      // 1. Create user in Firebase
+      const userRecord = await admin.auth().createUser({
+        email,
+        password,
+        displayName: fullName,
+      });
+
+      const userId = new mongoose.Types.ObjectId();
+      const domain = email.split('@')[1];
+
+      // 2. Check for existing organization by domain
+      // Find a ChainManager with the same email domain
+      const existingChainManager = await User.findOne({
+        role: 'ChainManager',
+        email: { $regex: `@${domain}$`, $options: 'i' }
+      });
+
+      let organizationId;
+      let role = 'BranchManager';
+      let userStatus = 'active'; // Branch Managers are auto-approved per requirements
+
+      if (existingChainManager) {
+        // Scenario A: Auto-Link to Chain
+        organizationId = existingChainManager.org_id;
+      } else {
+        // Scenario B: No-Chain (Independent)
+        // Create a new independent organization
+        const organization = new Organization({
+          name: `${branchName} Group`, // Default group name for independent
+          vat_trn: vatTrn,
+          hq_address: address, // HQ is the branch address
+>>>>>>> Stashed changes
           trade_license: tradeLicense,
           logo_url: logoUrl,
           primary_color: primaryColor || '#FF6B35',
           expected_branch_count: expectedBranchCount || 1,
           pos_system: posSystem || 'Custom',
+<<<<<<< Updated upstream
           status: 'active'
         });
         await organization.save();
@@ -239,12 +288,39 @@ class AuthController {
       });
 
       // 4. Create user in MongoDB
+=======
+          owner_id: userId,
+        });
+        await organization.save();
+        organizationId = organization._id;
+
+        // For independent owners, they are effectively Chain Managers of their single store
+        // But requested flow says "Branch Manager" signup type. 
+        // We will assign them BranchManager role effectively, but they own the org.
+        // Or if they are truly independent, they might need ChainManager capabilities too?
+        // Requirement says: "makes you the manager of the first branch".
+      }
+
+      // 3. Create the Branch
+      const branch = new Branch({
+        org_id: organizationId,
+        name: branchName,
+        address: address,
+        manager_id: userId,
+        contact_number: phoneNumber,
+        status: 'active'
+      });
+      await branch.save();
+
+      // 4. Create User in MongoDB
+>>>>>>> Stashed changes
       const user = new User({
         _id: userId,
         firebaseUid: userRecord.uid,
         email: userRecord.email,
         displayName: fullName,
         phoneNumber: phoneNumber,
+<<<<<<< Updated upstream
         role: 'BranchManager',
         org_id: orgId,
         branch_id: branch._id,
@@ -254,16 +330,38 @@ class AuthController {
 
       res.status(201).json({ 
         message: 'Branch Manager signup successful', 
+=======
+        role: role,
+        org_id: organizationId,
+        branch_id: branch._id,
+        status: userStatus
+      });
+      await user.save();
+
+      res.status(201).json({
+        message: 'Signup successful',
+>>>>>>> Stashed changes
         user: {
           id: user._id,
           email: user.email,
           role: user.role,
+<<<<<<< Updated upstream
           org_id: user.org_id,
           branch_id: user.branch_id
         },
         branch 
       });
     } catch (error) {
+=======
+          status: user.status
+        },
+        organizationId: organizationId,
+        branchId: branch._id
+      });
+
+    } catch (error) {
+      console.error("Signup Branch Manager Error:", error);
+>>>>>>> Stashed changes
       res.status(400).json({ message: error.message });
     }
   }
