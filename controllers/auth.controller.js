@@ -177,6 +177,8 @@ class AuthController {
         posSystem
       } = req.body;
 
+      console.log("Signup Request - Phone:", phoneNumber, "Branch:", branchName);
+
       if (!email || !password || !branchName) {
         return res.status(400).json({ message: 'Email, password, and branch name are required' });
       }
