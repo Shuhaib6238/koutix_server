@@ -237,11 +237,12 @@ class AuthController {
       await branch.save();
 
       // 3. Create user in Firebase
+      // Note: We skip sending phoneNumber to Firebase to avoid strict E.164 validation errors.
+      // The phone number is saved in MongoDB instead.
       const userRecord = await admin.auth().createUser({
         email,
         password,
         displayName: fullName,
-        phoneNumber: phoneNumber
       });
 
       // 4. Create user in MongoDB
