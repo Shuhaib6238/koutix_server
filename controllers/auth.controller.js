@@ -162,11 +162,11 @@ class AuthController {
 
   async signupBranchManager(req, res) {
     try {
-      const { 
-        email, 
-        password, 
-        fullName, 
-        branchName, 
+      const {
+        email,
+        password,
+        fullName,
+        branchName,
         address,
         phoneNumber,
         vatTrn,
@@ -183,9 +183,9 @@ class AuthController {
 
       // 1. Domain-based Auto-linking
       const domain = email.split("@")[1];
-      
+
       // Look for an existing ChainManager with the same domain
-      const existingChainManager = await User.findOne({ 
+      const existingChainManager = await User.findOne({
         role: 'ChainManager',
         status: 'active',
         email: { $regex: new RegExp(`@${domain}$`, 'i') }
@@ -252,8 +252,8 @@ class AuthController {
       });
       await user.save();
 
-      res.status(201).json({ 
-        message: 'Branch Manager signup successful', 
+      res.status(201).json({
+        message: 'Branch Manager signup successful',
         user: {
           id: user._id,
           email: user.email,
@@ -261,7 +261,7 @@ class AuthController {
           org_id: user.org_id,
           branch_id: user.branch_id
         },
-        branch 
+        branch
       });
     } catch (error) {
       res.status(400).json({ message: error.message });
