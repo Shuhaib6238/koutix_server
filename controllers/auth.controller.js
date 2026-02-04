@@ -268,7 +268,8 @@ class AuthController {
         branch
       });
     } catch (error) {
-      res.status(400).json({ message: error.message });
+      console.error("Signup Branch Manager Error:", error);
+      res.status(400).json({ message: `${error.message} (Code: ${error.code || 'Unknown'})` });
     }
   }
 
