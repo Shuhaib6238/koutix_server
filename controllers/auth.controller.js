@@ -181,6 +181,10 @@ class AuthController {
         return res.status(400).json({ message: 'Email, password, and branch name are required' });
       }
 
+      if (logoUrl && logoUrl.length > 500) {
+        return res.status(400).json({ message: 'Logo URL is too long. Please use a valid URL.' });
+      }
+
       // 1. Domain-based Auto-linking
       const domain = email.split("@")[1];
 
