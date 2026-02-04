@@ -39,6 +39,16 @@ const UserSchema = new mongoose.Schema({
   profileImage: {
     type: String,
     default: null
+  },
+  org_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    default: null
+  },
+  branch_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    default: null
   }
 }, {
   timestamps: true

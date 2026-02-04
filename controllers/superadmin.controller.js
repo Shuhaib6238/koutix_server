@@ -75,6 +75,15 @@ class SuperAdminController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  async getDashboardStats(req, res) {
+    try {
+      const stats = await superAdminService.getDashboardStats();
+      res.status(200).json(stats);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 
 module.exports = new SuperAdminController();

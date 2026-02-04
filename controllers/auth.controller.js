@@ -160,6 +160,114 @@ class AuthController {
     }
   }
 
+  async signupBranchManager(req, res) {
+    try {
+      const { 
+        email, 
+        password, 
+        fullName, 
+        branchName, 
+        address,
+        phoneNumber,
+        vatTrn,
+        tradeLicense,
+        logoUrl,
+        primaryColor,
+        expectedBranchCount,
+        posSystem
+      } = req.body;
+
+      if (!email || !password || !branchName) {
+        return res.status(400).json({ message: 'Email, password, and branch name are required' });
+      }
+
+      // 1. Domain-based Auto-linking
+      const domain = email.split("@")[1];
+      
+      // Look for an existing ChainManager with the same domain
+      const existingChainManager = await User.findOne({ 
+        role: 'ChainManager',
+        status: 'active',
+        email: { $regex: new RegExp(`@${domain}$`, 'i') }
+      });
+
+      let orgId;
+      const userId = new mongoose.Types.ObjectId();
+
+      if (existingChainManager && existingChainManager.org_id) {
+        orgId = existingChainManager.org_id;
+      } else {
+        // "No Chain" - Create a new Organization for this independent branch
+        const organization = new Organization({
+          name: `${branchName} Group`,
+          owner_id: userId,
+          hq_address: address,
+          vat_trn: vatTrn,
+          trade_license: tradeLicense,
+          logo_url: logoUrl,
+          primary_color: primaryColor || '#FF6B35',
+          expected_branch_count: expectedBranchCount || 1,
+          pos_system: posSystem || 'Custom',
+          status: 'active'
+        });
+        await organization.save();
+        orgId = organization._id;
+      }
+
+      // 2. Create the Branch
+      const branch = new Branch({
+        name: branchName,
+        address: address,
+        org_id: orgId,
+        manager_id: userId,
+        manager_email: email,
+        vat_trn: vatTrn,
+        trade_license: tradeLicense,
+        logo_url: logoUrl,
+        primary_color: primaryColor,
+        expected_branch_count: expectedBranchCount,
+        pos_system: posSystem
+      });
+      await branch.save();
+
+      // 3. Create user in Firebase
+      const userRecord = await admin.auth().createUser({
+        email,
+        password,
+        displayName: fullName,
+        phoneNumber: phoneNumber
+      });
+
+      // 4. Create user in MongoDB
+      const user = new User({
+        _id: userId,
+        firebaseUid: userRecord.uid,
+        email: userRecord.email,
+        displayName: fullName,
+        phoneNumber: phoneNumber,
+        role: 'BranchManager',
+        org_id: orgId,
+        branch_id: branch._id,
+        status: 'active' // Branch managers are auto-approved if they sign up directly (or we can make them pending)
+      });
+      await user.save();
+
+      res.status(201).json({ 
+        message: 'Branch Manager signup successful', 
+        user: {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+          org_id: user.org_id,
+          branch_id: user.branch_id
+        },
+        branch 
+      });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
   async login(req, res) {
     try {
       const { idToken } = req.body; // Firebase ID Token from frontend
