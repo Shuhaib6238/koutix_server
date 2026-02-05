@@ -56,6 +56,54 @@ class SuperAdminController {
     }
   }
 
+  async getPendingChainManagers(req, res) {
+    try {
+      const managers = await superAdminService.getPendingChainManagers();
+      res.status(200).json(managers);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async approveChainManagerById(req, res) {
+    try {
+      const { chainId } = req.params;
+      if (!chainId) {
+        return res.status(400).json({ message: 'Chain ID (User ID) is required' });
+      }
+
+      // Reuse valid chain manager approval logic service
+      const user = await superAdminService.approveChainManager(chainId, null);
+
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.status(200).json({ message: 'ChainManager approved successfully', user });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async rejectChainManager(req, res) {
+    try {
+      const { chainId } = req.params;
+      if (!chainId) {
+        return res.status(400).json({ message: 'Chain ID (User ID) is required' });
+      }
+
+      const user = await superAdminService.rejectChainManager(chainId);
+
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.status(200).json({ message: 'ChainManager rejected successfully', user });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
   async approveChainManager(req, res) {
     try {
       const { userId, email } = req.body;
