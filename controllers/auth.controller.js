@@ -293,8 +293,12 @@ class AuthController {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      if (user.status !== 'active') {
-        return res.status(403).json({ message: 'Account is not active' });
+      if (user.status === 'pending') {
+        return res.status(403).json({ message: 'Account is pending SuperAdmin approval' });
+      }
+
+      if (user.status === 'inactive') {
+        return res.status(403).json({ message: 'Account is inactive or has been rejected' });
       }
 
       // 3. Generate JWT
