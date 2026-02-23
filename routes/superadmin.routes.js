@@ -13,5 +13,6 @@ router.put('/approve-chain/:chainId', authMiddleware, roleMiddleware(['SuperAdmi
 router.put('/reject-chain/:chainId', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.rejectChainManager);
 
 router.get('/dashboard', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getDashboardStats);
+router.get('/supermarkets', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getSupermarkets);
 
 module.exports = router;
