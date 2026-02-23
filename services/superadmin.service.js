@@ -58,7 +58,9 @@ class SuperAdminService {
       totalUsers,
       totalChainManagers,
       pendingChainManagers,
+      activeChainManagers,
       totalBranchManagers,
+      activeBranchManagers,
       noChainedManagers,
       totalOrganizations,
       totalBranches,
@@ -67,7 +69,9 @@ class SuperAdminService {
       User.countDocuments(),
       User.countDocuments({ role: 'ChainManager' }),
       User.countDocuments({ role: 'ChainManager', status: 'pending' }),
+      User.countDocuments({ role: 'ChainManager', status: 'active' }),
       User.countDocuments({ role: 'BranchManager' }),
+      User.countDocuments({ role: 'BranchManager', status: 'active' }),
       User.countDocuments({ role: 'admin' }),
       Organization.countDocuments(),
       Branch.countDocuments(),
@@ -79,10 +83,12 @@ class SuperAdminService {
         total: totalUsers,
         chainManagers: {
           total: totalChainManagers,
-          pending: pendingChainManagers
+          pending: pendingChainManagers,
+          active: activeChainManagers
         },
         branchManagers: {
-          total: totalBranchManagers
+          total: totalBranchManagers,
+          active: activeBranchManagers
         },
         noChainedManagers: {
           total: noChainedManagers
