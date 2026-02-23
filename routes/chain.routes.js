@@ -9,8 +9,8 @@ const partnerController = require('../controllers/partner.controller');
 
 router.post('/signup', partnerController.signupChainManager);
 
-router.post('/branch', authMiddleware, roleMiddleware(['ChainManager']), chainController.createBranch);
-router.post('/invite-manager', authMiddleware, roleMiddleware(['ChainManager']), chainController.inviteBranchManager);
-router.get('/branches', authMiddleware, roleMiddleware(['ChainManager']), chainController.getBranches);
+router.post('/stores', authMiddleware, roleMiddleware(['ChainManager']), chainController.inviteBranchManager);
+router.get('/stores', authMiddleware, roleMiddleware(['ChainManager']), chainController.getBranches);
+router.get('/dashboard', authMiddleware, roleMiddleware(['ChainManager', 'BranchManager']), chainController.getDashboardStats);
 
 module.exports = router;

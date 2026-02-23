@@ -25,7 +25,6 @@ class SuperAdminController {
       // 2. Create organization
       const organization = new Organization({
         name: organizationName,
-        owner_id: userId,
       });
       await organization.save();
 

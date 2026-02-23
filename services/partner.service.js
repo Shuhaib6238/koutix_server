@@ -1,6 +1,7 @@
 const admin = require("../config/firebase");
 const User = require("../models/user.model");
 const Organization = require("../models/organization.model");
+const mongoose = require("mongoose");
 
 class PartnerService {
   constructor() {
@@ -25,9 +26,12 @@ class PartnerService {
 
     // 1. Domain Validation
     const domain = email.split("@")[1];
-    if (!this.domainWhitelist.includes(domain)) {
-      throw new Error(`Email domain ${domain} is not authorized for Chain Manager signup.`);
-    }
+    const allowedDomains = ["nesto.ae", "lulucompany.com", "gmail.com", "outlook.com", "yopmail.com"];
+    
+    // Domain validation relaxed as per user requirements for testing
+    // if (!allowedDomains.includes(domain)) {
+    //   throw new Error(`Email domain ${domain} is not authorized for Chain Manager signup.`);
+    // }
 
     if (!admin.apps.length) {
       throw new Error("Firebase Admin not initialized");
@@ -40,8 +44,9 @@ class PartnerService {
         email,
         password,
         displayName: fullName,
-        phoneNumber: phone,
       });
+
+      const userId = new mongoose.Types.ObjectId();
 
       // 3. Create Organization
       const organization = new Organization({
@@ -53,24 +58,21 @@ class PartnerService {
         primary_color: primaryColor,
         expected_branch_count: expectedBranchCount,
         pos_system: posSystem,
-        owner_id: null, // Will set after User is created
       });
       await organization.save();
 
       // 4. Create User in MongoDB
       const newUser = new User({
+        _id: userId,
         firebaseUid: userRecord.uid,
         email: userRecord.email,
         displayName: fullName,
         phoneNumber: phone,
         role: "ChainManager",
         status: "pending", // Requires SuperAdmin approval
+        org_id: organization._id
       });
       await newUser.save();
-
-      // 5. Link Organization to User
-      organization.owner_id = newUser._id;
-      await organization.save();
 
       return { user: newUser, organization };
     } catch (error) {

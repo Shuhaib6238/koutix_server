@@ -6,11 +6,6 @@ const OrganizationSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  owner_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
   status: {
     type: String,
     enum: ['active', 'inactive'],

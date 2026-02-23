@@ -1,6 +1,7 @@
 const User = require('../models/user.model');
 const Organization = require('../models/organization.model');
 const Branch = require('../models/branch.model');
+const Store = require('../models/store.model');
 
 class SuperAdminService {
   async approveChainManager(userId, email) {
@@ -57,14 +58,20 @@ class SuperAdminService {
       totalUsers,
       totalChainManagers,
       pendingChainManagers,
+      totalBranchManagers,
+      noChainedManagers,
       totalOrganizations,
-      totalBranches
+      totalBranches,
+      totalIndependentStores
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: 'ChainManager' }),
       User.countDocuments({ role: 'ChainManager', status: 'pending' }),
+      User.countDocuments({ role: 'BranchManager' }),
+      User.countDocuments({ role: 'admin' }),
       Organization.countDocuments(),
-      Branch.countDocuments()
+      Branch.countDocuments(),
+      Store.countDocuments()
     ]);
 
     return {
@@ -73,6 +80,12 @@ class SuperAdminService {
         chainManagers: {
           total: totalChainManagers,
           pending: pendingChainManagers
+        },
+        branchManagers: {
+          total: totalBranchManagers
+        },
+        noChainedManagers: {
+          total: noChainedManagers
         }
       },
       organizations: {
@@ -80,6 +93,11 @@ class SuperAdminService {
       },
       branches: {
         total: totalBranches
+      },
+      stores: {
+        total: totalBranches + totalIndependentStores,
+        independent: totalIndependentStores,
+        chained: totalBranches
       }
     };
   }

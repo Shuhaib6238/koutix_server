@@ -1,6 +1,17 @@
 const adminService = require("../services/admin.service");
+const dashboardService = require("../services/dashboard.service");
 
 class AdminController {
+  async getDashboardStats(req, res) {
+    try {
+      const userId = req.user.id;
+      const stats = await dashboardService.getAdminStats(userId);
+      res.status(200).json(stats);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
   async signup(req, res) {
     try {
       const { storeName, email, password } = req.body;

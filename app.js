@@ -23,6 +23,8 @@ const chainRoutes = require('./routes/chain.routes');
 const storeRoutes = require('./routes/stores.routes');
 const usersRoutes = require('./routes/users.routes');
 const adminRoutes = require('./routes/admin.routes');
+const sapRoutes = require('./routes/sap.routes');
+const productsRoutes = require('./routes/products.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/superadmin', superAdminRoutes);
@@ -30,6 +32,8 @@ app.use('/api/chain', chainRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/sap', sapRoutes);
+app.use('/api/products', productsRoutes);
 
 app.get('/', (req, res) => {
   res.send('Koutix Server is running');

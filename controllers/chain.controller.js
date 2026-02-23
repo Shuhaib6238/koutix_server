@@ -1,75 +1,30 @@
 const User = require('../models/user.model');
 const Branch = require('../models/branch.model');
 const Invitation = require('../models/invitation.model');
+const emailService = require('../services/email.service');
 const crypto = require('crypto');
+const admin = require('../config/firebase');
+const mongoose = require('mongoose');
+const dashboardService = require('../services/dashboard.service');
+
 
 class ChainController {
-  async createBranch(req, res) {
+
+  async getDashboardStats(req, res) {
     try {
-      const { name, location, managerEmail } = req.body;
-      const org_id = req.user?.org_id || null;
+      const orgId = req.user.org_id;
+      const role = req.user.role;
 
-      if (!name || !location) {
-        return res.status(400).json({ message: 'Branch name and location are required' });
+      if (role === 'ChainManager') {
+        const stats = await dashboardService.getChainManagerStats(orgId);
+        return res.status(200).json(stats);
+      } else if (role === 'BranchManager') {
+        const branchId = req.user.branch_id;
+        const stats = await dashboardService.getBranchManagerStats(orgId, branchId);
+        return res.status(200).json(stats);
+      } else {
+        return res.status(403).json({ message: 'Access denied' });
       }
-
-      // 1. Generate branch_id and pos_api_key
-      const branch_id = `BR${Math.floor(1000 + Math.random() * 9000)}`;
-      const pos_api_key = crypto.randomBytes(16).toString('hex');
-
-      // 2. Create branch
-      const branch = new Branch({
-        org_id,
-        name,
-        address: req.body.address || 'N/A', // Assuming address might be optional if location is provided
-        location,
-        branch_id,
-        pos_api_key,
-        manager_email: managerEmail
-      });
-      await branch.save();
-
-      let invitation = null;
-      
-      // 2. If managerEmail provided, create invitation
-      if (managerEmail) {
-        const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-        invitation = new Invitation({
-          email: managerEmail,
-          role: 'BranchManager',
-          org_id,
-          branch_id: branch._id,
-          token,
-          expiresAt
-        });
-        await invitation.save();
-
-        // 3. Send email notification (personalized template)
-        const invitationLink = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/onboarding?token=${token}`;
-        
-        console.log(`
-========================================
-✅ Your ${name} branch is ready on Koutix
-========================================
-Hi,
-
-Your ${org_id ? 'HQ' : 'Admin'} added your ${name} branch. 
-Click here to set password: ${invitationLink}
-
-Branch: ${name} | ID: ${branch_id} | API Key: ${pos_api_key}
-
-Follow the link to get started.
-========================================
-        `);
-      }
-
-      res.status(201).json({ 
-        message: managerEmail ? 'Branch created and invitation sent successfully' : 'Branch created successfully', 
-        branch,
-        invitation: invitation ? { email: managerEmail, token: invitation.token } : null
-      });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
@@ -77,38 +32,77 @@ Follow the link to get started.
 
   async inviteBranchManager(req, res) {
     try {
-      const { email, branch_id } = req.body;
-      const org_id = req.user.org_id;
+      const { name, location, managerEmail, address } = req.body;
+      const org_id = req.user?.org_id;
 
-      if (!email || !branch_id) {
-        return res.status(400).json({ message: 'Email and branch_id are required' });
+      if (!name || !location || !managerEmail) {
+        return res.status(400).json({ message: 'Name, location, and managerEmail are required' });
       }
 
-      // 1. Verify branch belongs to organization
-      const branch = await Branch.findOne({ _id: branch_id, org_id });
-      if (!branch) {
-        return res.status(404).json({ message: 'Branch not found in your organization' });
-      }
+      // 1. Generate branch_id and pos_api_key
+      const generated_branch_id = `BR${Math.floor(1000 + Math.random() * 9000)}`;
+      const pos_api_key = crypto.randomBytes(16).toString('hex');
+      const tempPassword = crypto.randomBytes(16).toString('hex'); // Temporary secret password
 
-      // 2. Create invitation token
-      const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      // 2. Create user in Firebase with temp password
+      const userRecord = await admin.auth().createUser({
+        email: managerEmail,
+        password: tempPassword,
+        displayName: name,
+      });
 
-      const invitation = new Invitation({
-        email,
+      const userId = new mongoose.Types.ObjectId();
+
+      // 3. Generate Password Reset Link
+      const resetLink = await admin.auth().generatePasswordResetLink(managerEmail);
+
+      // 4. Create branch
+      const branch = new Branch({
+        org_id,
+        name,
+        address: address || 'N/A',
+        location,
+        branch_id: generated_branch_id,
+        pos_api_key,
+        manager_email: managerEmail,
+        manager_id: userId
+      });
+      await branch.save();
+
+      // 5. Create User in MongoDB
+      const newUser = new User({
+        _id: userId,
+        firebaseUid: userRecord.uid,
+        email: managerEmail,
+        displayName: name,
         role: 'BranchManager',
         org_id,
-        branch_id,
-        token,
-        expiresAt
+        branch_id: branch._id,
+        status: 'active'
       });
-      await invitation.save();
+      await newUser.save();
 
-      // In a real app, send email here
-      console.log(`Invitation link for ${email}: /onboarding?token=${token}`);
+      // 6. Send email notification with reset link
+      const emailResult = await emailService.sendBranchManagerInvitation(managerEmail, name, resetLink);
 
-      res.status(201).json({ message: 'Invitation sent successfully', invitation });
+      return res.status(201).json({
+        message: emailResult.success 
+          ? 'Branch and Manager account created. Activation email sent.' 
+          : 'Branch and Manager created, but activation email failed. Please check SMTP settings.',
+        emailSuccess: emailResult.success,
+        emailError: emailResult.error || null,
+        branch,
+        user: { email: managerEmail, role: 'BranchManager' }
+      });
     } catch (error) {
+      // Rollback Firebase user if it was created
+      if (typeof userRecord !== 'undefined' && userRecord.uid) {
+        try {
+          await admin.auth().deleteUser(userRecord.uid);
+        } catch (rollbackError) {
+          console.error("Rollback error:", rollbackError);
+        }
+      }
       res.status(400).json({ message: error.message });
     }
   }
