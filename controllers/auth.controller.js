@@ -59,6 +59,7 @@ class AuthController {
         name: supermarketName,
         country: country || '',
         stripeCustomerId: stripeCustomer.id,
+        planType: selectedPlanId, // <-- Added this to set legacy flat field explicitely
         subscription: {
           status: 'PENDING',
           planId: selectedPlanId
