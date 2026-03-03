@@ -102,7 +102,7 @@ class SuperAdminController {
 
   async getAllBranchManagers(req, res) {
     try {
-      const managers = await User.find({ role: 'BranchManager' }).populate('org_id').populate('branch_id');
+      const managers = await User.find({ role: { $in: ['BRANCH_MANAGER', 'BranchManager'] } }).populate('org_id').populate('branch_id');
       res.status(200).json(managers);
     } catch (error) {
       res.status(400).json({ message: error.message });

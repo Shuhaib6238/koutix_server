@@ -5,13 +5,13 @@ const Store = require('../models/store.model');
 
 class SuperAdminService {
   async getAllChainManagers() {
-    const managers = await User.find({ role: 'ChainManager' }).populate('org_id').lean();
+    const managers = await User.find({ role: { $in: ['CHAIN_MANAGER', 'ChainManager'] } }).populate('org_id').lean();
     return managers.map(cm => this._formatChainManager(cm));
   }
 
   async getPendingChainManagers() {
     // Only return ChainManagers whose status is 'pending'
-    const managers = await User.find({ role: 'ChainManager', status: 'pending' }).populate('org_id').lean();
+    const managers = await User.find({ role: { $in: ['CHAIN_MANAGER', 'ChainManager'] }, status: 'pending' }).populate('org_id').lean();
     return managers.map(cm => this._formatChainManager(cm));
   }
 
@@ -72,11 +72,11 @@ class SuperAdminService {
       activeOrganizations
     ] = await Promise.all([
       User.countDocuments(),
-      User.countDocuments({ role: 'ChainManager' }),
-      User.countDocuments({ role: 'ChainManager', status: 'pending' }),
-      User.countDocuments({ role: 'ChainManager', status: 'active' }),
-      User.countDocuments({ role: 'BranchManager' }),
-      User.countDocuments({ role: 'BranchManager', status: 'active' }),
+      User.countDocuments({ role: { $in: ['CHAIN_MANAGER', 'ChainManager'] } }),
+      User.countDocuments({ role: { $in: ['CHAIN_MANAGER', 'ChainManager'] }, status: 'pending' }),
+      User.countDocuments({ role: { $in: ['CHAIN_MANAGER', 'ChainManager'] }, status: 'active' }),
+      User.countDocuments({ role: { $in: ['BRANCH_MANAGER', 'BranchManager'] } }),
+      User.countDocuments({ role: { $in: ['BRANCH_MANAGER', 'BranchManager'] }, status: 'active' }),
       User.countDocuments({ role: 'admin' }),
       Organization.countDocuments(),
       Branch.countDocuments(),
@@ -159,7 +159,7 @@ class SuperAdminService {
    */
   async getSupermarkets() {
     // 1. Get all ChainManagers with populated org
-    const chainManagers = await User.find({ role: 'ChainManager' }).populate('org_id').lean();
+    const chainManagers = await User.find({ role: { $in: ['CHAIN_MANAGER', 'ChainManager'] } }).populate('org_id').lean();
 
     // 2. For each chain, get branches under that org
     const chains = await Promise.all(
@@ -207,7 +207,7 @@ class SuperAdminService {
       .map(cm => (cm.org_id._id || cm.org_id).toString());
 
     // 4. Get all BranchManagers
-    const branchManagers = await User.find({ role: 'BranchManager' }).populate('org_id').populate('branch_id').lean();
+    const branchManagers = await User.find({ role: { $in: ['BRANCH_MANAGER', 'BranchManager'] } }).populate('org_id').populate('branch_id').lean();
 
     // 5. Filter to only those whose org is NOT owned by a ChainManager (independent)
     const singleMarkets = branchManagers
