@@ -108,6 +108,14 @@ class SuperAdminController {
       res.status(400).json({ message: error.message });
     }
   }
+  async deactivateUser(req, res) {
+    try {
+      await superAdminService.deactivateUser(req.params.id);
+      res.status(200).json({ message: 'User deactivated successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 
 module.exports = new SuperAdminController();

@@ -31,6 +31,14 @@ class SuperAdminService {
     return user;
   }
 
+  async deactivateUser(id) {
+    const user = await User.findById(id);
+    if (!user) throw new Error('User not found');
+    user.status = 'inactive';
+    await user.save();
+    return user;
+  }
+
   _formatChainManager(user) {
     const org = user.org_id || {};
     return {
