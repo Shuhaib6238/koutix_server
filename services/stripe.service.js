@@ -5,19 +5,27 @@ class StripeService {
   /**
    * Create a new Stripe customer
    */
-  async createCustomer(email, name, orgId) {
+  async createCustomer(email, name, orgId = null) {
+    const metadata = {};
+    if (orgId) metadata.orgId = orgId.toString();
+
     const customer = await stripe.customers.create({
       email,
       name,
-      metadata: { orgId: orgId.toString() }
+      metadata
     });
     return customer;
   }
 
   /**
    * Create a Checkout Session for a subscription
+   * @param {string} customerId - Stripe Customer ID
+   * @param {string} priceId - Stripe Price ID
+   * @param {string} successUrl - Redirect URL on success
+   * @param {string} cancelUrl - Redirect URL on cancel
+   * @param {object} metadata - Additional metadata (e.g. { tenantId })
    */
-  async createCheckoutSession(customerId, priceId, successUrl, cancelUrl) {
+  async createCheckoutSession(customerId, priceId, successUrl, cancelUrl, metadata = {}) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
@@ -25,15 +33,17 @@ class StripeService {
       mode: 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,
+      metadata: metadata,
       subscription_data: {
         trial_period_days: 7,
+        metadata: metadata
       },
     });
     return session;
   }
 
   /**
-   * Cancel a subscription
+   * Cancel a subscription (at period end)
    */
   async cancelSubscription(subscriptionId) {
     const deletedSubscription = await stripe.subscriptions.update(subscriptionId, {
@@ -62,15 +72,45 @@ class StripeService {
    */
   async syncSubscriptionStatus(stripeSubscriptionId) {
     const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+
+    const statusMap = {
+      'active': 'ACTIVE',
+      'trialing': 'TRIALING',
+      'past_due': 'PAST_DUE',
+      'canceled': 'CANCELED',
+      'unpaid': 'UNPAID',
+      'incomplete': 'INCOMPLETE'
+    };
+
     const org = await Organization.findOneAndUpdate(
-      { stripeSubscriptionId },
       {
+        $or: [
+          { 'subscription.stripeSubscriptionId': stripeSubscriptionId },
+          { stripeSubscriptionId }
+        ]
+      },
+      {
+        'subscription.status': statusMap[subscription.status] || 'PENDING',
+        'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
         subscriptionStatus: subscription.status,
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
       },
       { new: true }
     );
     return org;
+  }
+
+  /**
+   * Get all available plans
+   */
+  getPlans() {
+    return Object.entries(PLANS).map(([key, plan]) => ({
+      id: key.toLowerCase(),
+      stripePriceId: plan.id,
+      name: plan.name,
+      price: plan.price || null,
+      features: plan.features
+    }));
   }
 }
 

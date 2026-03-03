@@ -6,6 +6,10 @@ const OrganizationSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  country: {
+    type: String,
+    trim: true
+  },
   status: {
     type: String,
     enum: ['active', 'inactive'],
@@ -40,12 +44,37 @@ const OrganizationSchema = new mongoose.Schema({
     enum: ['SAP', 'Zoho', 'Custom'],
     default: 'Custom'
   },
-  // Stripe Subscription Fields
+  owner_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  // ─── Stripe / Subscription (Nested Object) ───
   stripeCustomerId: {
     type: String,
     unique: true,
     sparse: true
   },
+  subscription: {
+    stripeSubscriptionId: {
+      type: String,
+      default: null
+    },
+    status: {
+      type: String,
+      enum: ['PENDING', 'ACTIVE', 'CANCELED', 'PAST_DUE', 'TRIALING', 'UNPAID', 'INCOMPLETE', 'NONE'],
+      default: 'NONE'
+    },
+    planId: {
+      type: String,
+      default: null
+    },
+    currentPeriodEnd: {
+      type: Date,
+      default: null
+    }
+  },
+  // Legacy flat fields (kept for backward compat, synced via pre-save)
   stripeSubscriptionId: {
     type: String,
     unique: true,
@@ -53,12 +82,12 @@ const OrganizationSchema = new mongoose.Schema({
   },
   subscriptionStatus: {
     type: String,
-    enum: ['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'none'],
+    enum: ['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'none', 'PENDING', 'ACTIVE', 'CANCELED'],
     default: 'none'
   },
   planType: {
     type: String,
-    enum: ['basic', 'premium', 'none'],
+    enum: ['basic', 'standard', 'premium', 'enterprise', 'none'],
     default: 'none'
   },
   currentPeriodEnd: {
@@ -66,6 +95,33 @@ const OrganizationSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true
+});
+
+// Sync nested subscription to legacy flat fields
+OrganizationSchema.pre('save', function (next) {
+  // Sync nested → flat
+  if (this.subscription) {
+    if (this.subscription.stripeSubscriptionId) {
+      this.stripeSubscriptionId = this.subscription.stripeSubscriptionId;
+    }
+    if (this.subscription.status) {
+      const statusMap = {
+        'PENDING': 'none',
+        'ACTIVE': 'active',
+        'CANCELED': 'canceled',
+        'PAST_DUE': 'past_due',
+        'TRIALING': 'trialing',
+        'UNPAID': 'unpaid',
+        'INCOMPLETE': 'incomplete',
+        'NONE': 'none'
+      };
+      this.subscriptionStatus = statusMap[this.subscription.status] || this.subscription.status;
+    }
+    if (this.subscription.currentPeriodEnd) {
+      this.currentPeriodEnd = this.subscription.currentPeriodEnd;
+    }
+  }
+  next();
 });
 
 module.exports = mongoose.model('Organization', OrganizationSchema);

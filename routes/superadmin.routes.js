@@ -5,10 +5,9 @@ const roleMiddleware = require('../middlewares/role.middleware');
 
 const router = express.Router();
 
-router.get('/chain-managers', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getAllChainManagers);
-// New specific routes
-router.get('/dashboard', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getDashboardStats);
-router.get('/supermarkets', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getSupermarkets);
-router.get('/branch-managers', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getAllBranchManagers);
+router.get('/chain-managers', authMiddleware, roleMiddleware(['SUPER_ADMIN', 'SuperAdmin']), superAdminController.getAllChainManagers);
+router.get('/dashboard', authMiddleware, roleMiddleware(['SUPER_ADMIN', 'SuperAdmin']), superAdminController.getDashboardStats);
+router.get('/supermarkets', authMiddleware, roleMiddleware(['SUPER_ADMIN', 'SuperAdmin']), superAdminController.getSupermarkets);
+router.get('/branch-managers', authMiddleware, roleMiddleware(['SUPER_ADMIN', 'SuperAdmin']), superAdminController.getAllBranchManagers);
 
 module.exports = router;

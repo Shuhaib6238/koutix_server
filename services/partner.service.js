@@ -13,30 +13,21 @@ class PartnerService {
   }
 
   async signupChainManager(data) {
-    const { 
-      email, 
-      password, 
-      fullName, 
-      phone, 
-      chainName, 
-      vatTrn, 
-      hqAddress, 
-      tradeLicense, 
-      logoUrl, 
-      primaryColor, 
-      expectedBranchCount, 
+    const {
+      email,
+      password,
+      fullName,
+      phone,
+      chainName,
+      vatTrn,
+      hqAddress,
+      tradeLicense,
+      logoUrl,
+      primaryColor,
+      expectedBranchCount,
       posSystem,
       planType = 'basic'
     } = data;
-
-    // 1. Domain Validation
-    const domain = email.split("@")[1];
-    const allowedDomains = ["nesto.ae", "lulucompany.com", "gmail.com", "outlook.com", "yopmail.com"];
-    
-    // Domain validation relaxed as per user requirements for testing
-    // if (!allowedDomains.includes(domain)) {
-    //   throw new Error(`Email domain ${domain} is not authorized for Chain Manager signup.`);
-    // }
 
     if (!admin.apps.length) {
       throw new Error("Firebase Admin not initialized");
@@ -44,7 +35,7 @@ class PartnerService {
 
     let userRecord;
     try {
-      // 2. Create user in Firebase
+      // 1. Create user in Firebase
       userRecord = await admin.auth().createUser({
         email,
         password,
@@ -53,7 +44,7 @@ class PartnerService {
 
       const userId = new mongoose.Types.ObjectId();
 
-      // 3. Create Organization
+      // 2. Create Organization (Tenant) — PENDING subscription
       const organization = new Organization({
         name: chainName,
         vat_trn: vatTrn,
@@ -63,25 +54,31 @@ class PartnerService {
         primary_color: primaryColor,
         expected_branch_count: expectedBranchCount,
         pos_system: posSystem,
+        owner_id: userId,
+        subscription: {
+          status: 'PENDING',
+          planId: planType
+        }
       });
       await organization.save();
 
-      // 4. Create User in MongoDB
+      // 3. Create User in MongoDB (CHAIN_MANAGER)
       const newUser = new User({
         _id: userId,
         firebaseUid: userRecord.uid,
         email: userRecord.email,
         displayName: fullName,
         phoneNumber: phone,
-        role: "ChainManager",
-        status: "active",
-        org_id: organization._id
+        role: "CHAIN_MANAGER",
+        type: "PARTNER",
+        tenantId: organization._id,
+        org_id: organization._id,
+        isActive: true,
+        status: "active"
       });
       await newUser.save();
-      organization.owner_id = userId;
-      await organization.save();
 
-      // 5. Create Stripe Customer and Checkout Session
+      // 4. Create Stripe Customer and Checkout Session
       let checkoutUrl = null;
       try {
         const stripeCustomer = await stripeService.createCustomer(
@@ -96,7 +93,7 @@ class PartnerService {
 
         const planKey = planType.toUpperCase();
         const selectedPlan = PLANS[planKey] || PLANS.BASIC;
-        
+
         const successUrl = `${process.env.FRONTEND_URL}/subscription-success?session_id={CHECKOUT_SESSION_ID}`;
         const cancelUrl = `${process.env.FRONTEND_URL}/subscription-cancel`;
 
@@ -104,7 +101,8 @@ class PartnerService {
           stripeCustomer.id,
           selectedPlan.id,
           successUrl,
-          cancelUrl
+          cancelUrl,
+          { tenantId: organization._id.toString() }
         );
         checkoutUrl = session.url;
       } catch (stripeError) {
@@ -113,7 +111,7 @@ class PartnerService {
 
       return { user: newUser, organization, checkoutUrl };
     } catch (error) {
-      // Rollback
+      // Rollback Firebase user if created
       if (userRecord && userRecord.uid) {
         try {
           await admin.auth().deleteUser(userRecord.uid);
@@ -124,6 +122,7 @@ class PartnerService {
       throw error;
     }
   }
+
   async signupBranchManager(data) {
     const {
       email,
@@ -150,10 +149,10 @@ class PartnerService {
       // 1. Domain-based Auto-linking (Skip for public domains)
       const domain = email.split("@")[1];
       let existingChainManager = null;
-      
+
       if (!this.publicDomains.includes(domain.toLowerCase())) {
         existingChainManager = await User.findOne({
-          role: 'ChainManager',
+          role: { $in: ['CHAIN_MANAGER', 'ChainManager'] },
           status: 'active',
           email: { $regex: new RegExp(`@${domain}$`, 'i') }
         });
@@ -163,12 +162,11 @@ class PartnerService {
       let isNewOrg = false;
       const userId = new mongoose.Types.ObjectId();
 
-      if (existingChainManager && existingChainManager.org_id) {
+      if (existingChainManager && (existingChainManager.tenantId || existingChainManager.org_id)) {
         console.log(`🔗 Auto-linking Branch Manager to existing chain: ${domain}`);
-        orgId = existingChainManager.org_id;
+        orgId = existingChainManager.tenantId || existingChainManager.org_id;
       } else {
         console.log(`🆕 Creating new independent Organization for domain: ${domain}`);
-        // "No Chain" - Create a new Organization for this independent branch
         const organization = new Organization({
           name: `${branchName} Group`,
           owner_id: userId,
@@ -179,7 +177,11 @@ class PartnerService {
           primary_color: primaryColor || '#FF6B35',
           expected_branch_count: expectedBranchCount || 1,
           pos_system: posSystem || 'Custom',
-          status: 'active'
+          status: 'active',
+          subscription: {
+            status: 'PENDING',
+            planId: planType
+          }
         });
         await organization.save();
         orgId = organization._id;
@@ -209,16 +211,20 @@ class PartnerService {
         displayName: fullName,
       });
 
-      // 4. Create user in MongoDB
+      // 4. Create user in MongoDB (BRANCH_MANAGER)
       const newUser = new User({
         _id: userId,
         firebaseUid: userRecord.uid,
         email: userRecord.email,
         displayName: fullName,
         phoneNumber: phoneNumber,
-        role: 'BranchManager',
+        role: 'BRANCH_MANAGER',
+        type: 'PARTNER',
+        tenantId: orgId,
         org_id: orgId,
+        branchId: branch._id,
         branch_id: branch._id,
+        isActive: true,
         status: 'active'
       });
       await newUser.save();
@@ -226,7 +232,7 @@ class PartnerService {
       // 5. Stripe Integration (Only if it's a new independent organization)
       let checkoutUrl = null;
       let organization = null;
-      
+
       if (isNewOrg) {
         console.log(`💳 Initializing Stripe for new Organization: ${orgId}`);
         organization = await Organization.findById(orgId);
@@ -251,7 +257,8 @@ class PartnerService {
             stripeCustomer.id,
             selectedPlan.id,
             successUrl,
-            cancelUrl
+            cancelUrl,
+            { tenantId: orgId.toString() }
           );
           checkoutUrl = session.url;
         } catch (stripeError) {
@@ -259,12 +266,12 @@ class PartnerService {
         }
       }
 
-      return { 
-        user: newUser, 
-        branch, 
-        organization, 
+      return {
+        user: newUser,
+        branch,
+        organization,
         checkoutUrl,
-        isIndependent: isNewOrg 
+        isIndependent: isNewOrg
       };
     } catch (error) {
       if (userRecord && userRecord.uid) {
