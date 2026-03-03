@@ -5,8 +5,30 @@ const Store = require('../models/store.model');
 
 class SuperAdminService {
   async getAllChainManagers() {
-    const managers = await User.find({ role: 'ChainManager' }).populate('org_id');
-    return managers.map(this._formatChainManager);
+    const managers = await User.find({ role: 'ChainManager' }).populate('org_id').lean();
+    return managers.map(cm => this._formatChainManager(cm));
+  }
+
+  async getPendingChainManagers() {
+    // Only return ChainManagers whose status is 'pending'
+    const managers = await User.find({ role: 'ChainManager', status: 'pending' }).populate('org_id').lean();
+    return managers.map(cm => this._formatChainManager(cm));
+  }
+
+  async approveChainManager(id) {
+    const user = await User.findById(id);
+    if (!user) throw new Error('ChainManager not found');
+    user.status = 'active';
+    await user.save();
+    return user;
+  }
+
+  async rejectChainManager(id) {
+    const user = await User.findById(id);
+    if (!user) throw new Error('ChainManager not found');
+    user.status = 'inactive'; // or delete it? We'll set inactive for history.
+    await user.save();
+    return user;
   }
 
   _formatChainManager(user) {
