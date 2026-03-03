@@ -223,6 +223,9 @@ class SuperAdminService {
             primaryColor: org.primary_color || '',
             expectedBranchCount: org.expected_branch_count || 0,
             posSystem: org.pos_system || 'Custom',
+            subscription: org.subscription || {},
+            subscriptionStatus: org.subscriptionStatus || 'none',
+            planType: org.planType || 'none',
           },
           branches: branches.map(b => ({
             id: b._id,
@@ -267,6 +270,9 @@ class SuperAdminService {
           posSystem: branch.pos_system || org.pos_system || 'Custom',
           vatTrn: branch.vat_trn || org.vat_trn || '',
           tradeLicense: branch.trade_license || org.trade_license || '',
+          subscription: org.subscription || {},
+          subscriptionStatus: org.subscriptionStatus || 'none',
+          planType: org.planType || 'none',
         };
       });
 
