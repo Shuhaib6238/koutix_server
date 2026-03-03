@@ -39,6 +39,30 @@ const OrganizationSchema = new mongoose.Schema({
     type: String,
     enum: ['SAP', 'Zoho', 'Custom'],
     default: 'Custom'
+  },
+  // Stripe Subscription Fields
+  stripeCustomerId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  stripeSubscriptionId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  subscriptionStatus: {
+    type: String,
+    enum: ['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'none'],
+    default: 'none'
+  },
+  planType: {
+    type: String,
+    enum: ['basic', 'premium', 'none'],
+    default: 'none'
+  },
+  currentPeriodEnd: {
+    type: Date
   }
 }, {
   timestamps: true

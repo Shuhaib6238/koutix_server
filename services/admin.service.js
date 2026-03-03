@@ -68,7 +68,7 @@ class AdminService {
     }
 
     if (user.status !== "active") {
-      throw new Error("Account is pending approval. Please contact SuperAdmin.");
+      throw new Error("Account is not active. Please contact SuperAdmin.");
     }
 
     // 3. Get store info

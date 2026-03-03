@@ -10,6 +10,10 @@ const app = express();
 app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
+// 1. Webhooks (Must be before express.json middleware for raw body)
+const webhookRoutes = require('./routes/webhook.routes');
+app.use('/api/webhooks', webhookRoutes);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -34,6 +38,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/sap', sapRoutes);
 app.use('/api/products', productsRoutes);
+app.use('/api/subscription', require('./routes/subscription.routes'));
 
 app.get('/', (req, res) => {
   res.send('Koutix Server is running');

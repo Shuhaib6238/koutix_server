@@ -7,7 +7,7 @@ const User = require("../models/user.model");
 const MONGO_URI = process.env.MONGO_URI;
 const SUPERADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || "koutix@gmail.com";
 const SUPERADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || "koutix@123";
-const SUPERADMIN_USERNAME = "Super Admin";
+const SUPERADMIN_USERNAME = "Koutix superadmin";
 
 const seedSuperAdmin = async () => {
   try {

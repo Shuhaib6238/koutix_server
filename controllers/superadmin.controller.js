@@ -48,76 +48,8 @@ class SuperAdminController {
 
   async getAllChainManagers(req, res) {
     try {
-      const managers = await User.find({ role: 'ChainManager' }).populate('org_id');
+      const managers = await superAdminService.getAllChainManagers();
       res.status(200).json(managers);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  async getPendingChainManagers(req, res) {
-    try {
-      const managers = await superAdminService.getPendingChainManagers();
-      res.status(200).json(managers);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  async approveChainManagerById(req, res) {
-    try {
-      const { chainId } = req.params;
-      if (!chainId) {
-        return res.status(400).json({ message: 'Chain ID (User ID) is required' });
-      }
-
-      // Reuse valid chain manager approval logic service
-      const user = await superAdminService.approveChainManager(chainId, null);
-
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      res.status(200).json({ message: 'ChainManager approved successfully', user });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  async rejectChainManager(req, res) {
-    try {
-      const { chainId } = req.params;
-      if (!chainId) {
-        return res.status(400).json({ message: 'Chain ID (User ID) is required' });
-      }
-
-      const user = await superAdminService.rejectChainManager(chainId);
-
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      res.status(200).json({ message: 'ChainManager rejected successfully', user });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  async approveChainManager(req, res) {
-    try {
-      const { userId, email } = req.body;
-
-      if (!userId && !email) {
-        return res.status(400).json({ message: 'User ID or Email is required' });
-      }
-
-      const user = await superAdminService.approveChainManager(userId, email);
-
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      res.status(200).json({ message: 'ChainManager approved successfully', user });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
@@ -136,6 +68,15 @@ class SuperAdminController {
     try {
       const data = await superAdminService.getSupermarkets();
       res.status(200).json(data);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getAllBranchManagers(req, res) {
+    try {
+      const managers = await User.find({ role: 'BranchManager' }).populate('org_id').populate('branch_id');
+      res.status(200).json(managers);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

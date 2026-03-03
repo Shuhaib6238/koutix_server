@@ -68,6 +68,7 @@ class SAPController {
               type: 'INVENTORY_ALERT'
             }
           });
+          console.log(`⚠️  ALERT: Critical Stock Alert sent for ${materialId} (Stock: ${quantity})`);
         } catch (fcmError) {
           console.warn('⚠️ FCM Notification Failed:', fcmError.message);
         }

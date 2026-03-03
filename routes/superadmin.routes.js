@@ -6,13 +6,9 @@ const roleMiddleware = require('../middlewares/role.middleware');
 const router = express.Router();
 
 router.get('/chain-managers', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getAllChainManagers);
-router.post('/approve-chain-manager', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.approveChainManager);
 // New specific routes
-router.get('/pending-chains', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getPendingChainManagers);
-router.put('/approve-chain/:chainId', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.approveChainManagerById);
-router.put('/reject-chain/:chainId', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.rejectChainManager);
-
 router.get('/dashboard', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getDashboardStats);
 router.get('/supermarkets', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getSupermarkets);
+router.get('/branch-managers', authMiddleware, roleMiddleware(['SuperAdmin']), superAdminController.getAllBranchManagers);
 
 module.exports = router;
