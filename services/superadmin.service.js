@@ -16,10 +16,21 @@ class SuperAdminService {
   }
 
   async approveChainManager(id) {
-    const user = await User.findById(id);
+    const user = await User.findById(id).populate('org_id');
     if (!user) throw new Error('ChainManager not found');
+
     user.status = 'active';
     await user.save();
+
+    // Also activate the organization
+    if (user.org_id) {
+      const org = await Organization.findById(user.org_id._id || user.org_id);
+      if (org) {
+        org.status = 'active';
+        await org.save();
+      }
+    }
+
     return user;
   }
 
@@ -34,8 +45,24 @@ class SuperAdminService {
   async deactivateUser(id) {
     const user = await User.findById(id);
     if (!user) throw new Error('User not found');
+
     user.status = 'inactive';
     await user.save();
+
+    // If user has an associated organization, deactivate it too
+    if (user.org_id) {
+      const org = await Organization.findById(user.org_id);
+      if (org) {
+        org.status = 'inactive';
+        // Also update subscription status if it exists
+        if (org.subscription) {
+          org.subscription.status = 'CANCELLED';
+        }
+        org.subscriptionStatus = 'none';
+        await org.save();
+      }
+    }
+
     return user;
   }
 
