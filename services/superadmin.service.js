@@ -56,7 +56,7 @@ class SuperAdminService {
         org.status = 'inactive';
         // Also update subscription status if it exists
         if (org.subscription) {
-          org.subscription.status = 'CANCELLED';
+          org.subscription.status = 'CANCELED';
         }
         org.subscriptionStatus = 'none';
         await org.save();
