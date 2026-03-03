@@ -40,7 +40,8 @@ const seedSuperAdmin = async () => {
       dbUser = await User.create({
         firebaseUid: userRecord.uid,
         email: SUPERADMIN_EMAIL,
-        role: "SuperAdmin", 
+        role: "SUPER_ADMIN", 
+        type: "PARTNER",
         displayName: SUPERADMIN_USERNAME,
         status: "active"
       });
