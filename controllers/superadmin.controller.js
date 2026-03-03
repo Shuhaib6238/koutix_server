@@ -55,6 +55,33 @@ class SuperAdminController {
     }
   }
 
+  async getPendingChainManagers(req, res) {
+    try {
+      const data = await superAdminService.getPendingChainManagers();
+      res.status(200).json(data);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async approveChainManager(req, res) {
+    try {
+      await superAdminService.approveChainManager(req.params.id);
+      res.status(200).json({ message: 'Chain manager approved successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async rejectChainManager(req, res) {
+    try {
+      await superAdminService.rejectChainManager(req.params.id);
+      res.status(200).json({ message: 'Chain manager rejected successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
   async getDashboardStats(req, res) {
     try {
       const stats = await superAdminService.getDashboardStats();

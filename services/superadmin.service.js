@@ -31,6 +31,9 @@ class SuperAdminService {
   }
 
   async getDashboardStats() {
+    const Transaction = require('../models/transaction.model');
+    const { PLANS } = require('../config/stripe.config');
+
     const [
       totalUsers,
       totalChainManagers,
@@ -41,7 +44,10 @@ class SuperAdminService {
       noChainedManagers,
       totalOrganizations,
       totalBranches,
-      totalIndependentStores
+      totalIndependentStores,
+      totalTransactionsCount,
+      revenueAggregation,
+      activeOrganizations
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: 'ChainManager' }),
@@ -52,15 +58,54 @@ class SuperAdminService {
       User.countDocuments({ role: 'admin' }),
       Organization.countDocuments(),
       Branch.countDocuments(),
-      Store.countDocuments()
+      Store.countDocuments(),
+      Transaction.countDocuments(),
+      Transaction.aggregate([{ $group: { _id: null, totalSales: { $sum: '$totalAmount' } } }]),
+      Organization.find({
+        $or: [
+          { 'subscription.status': 'ACTIVE' },
+          { subscriptionStatus: 'active' } // Check both flat and nested legacy
+        ]
+      })
     ]);
 
+    // Calculate MRR (Monthly Recurring Revenue) intelligently based on Active Tenants
+    let monthlyRecurringRevenue = 0;
+    activeOrganizations.forEach(org => {
+      let planKey = org.planType || 'none';
+      if (org.subscription && org.subscription.planId) {
+        planKey = org.subscription.planId;
+      }
+
+      const planStr = String(planKey).toUpperCase();
+      if (PLANS[planStr] && PLANS[planStr].price) {
+        // Remove dollar sign, convert price to number logic: "$29/mo" => 29
+        const match = PLANS[planStr].price.match(/\$(\d+)/);
+        if (match && match[1]) {
+          monthlyRecurringRevenue += Number(match[1]);
+        }
+      }
+    });
+
+    const totalHistoricalPlatformRevenue = revenueAggregation[0]?.totalSales || 0;
+
     return {
+      overview: {
+        totalTenants: totalOrganizations,
+        activeSubscriptions: activeOrganizations.length,
+        pendingTenants: totalOrganizations - activeOrganizations.length,
+        totalBranches: totalBranches,
+        totalCustomers: totalUsers - (totalChainManagers + totalBranchManagers + noChainedManagers),
+        totalOrders: totalTransactionsCount,
+        mrr: monthlyRecurringRevenue,
+        historicalRevenue: totalHistoricalPlatformRevenue
+      },
       users: {
         total: totalUsers,
         chainManagers: {
           total: totalChainManagers,
-          active: activeChainManagers
+          active: activeChainManagers,
+          pending: pendingChainManagers
         },
         branchManagers: {
           total: totalBranchManagers,
@@ -71,7 +116,8 @@ class SuperAdminService {
         }
       },
       organizations: {
-        total: totalOrganizations
+        total: totalOrganizations,
+        active: activeOrganizations.length
       },
       branches: {
         total: totalBranches
