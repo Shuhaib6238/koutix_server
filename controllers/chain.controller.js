@@ -75,7 +75,8 @@ class ChainController {
         firebaseUid: userRecord.uid,
         email: managerEmail,
         displayName: name,
-        role: 'BranchManager',
+        role: 'BRANCH_MANAGER',
+        type: 'PARTNER',
         org_id,
         branch_id: branch._id,
         status: 'active'
@@ -86,13 +87,13 @@ class ChainController {
       const emailResult = await emailService.sendBranchManagerInvitation(managerEmail, name, resetLink);
 
       return res.status(201).json({
-        message: emailResult.success 
-          ? 'Branch and Manager account created. Activation email sent.' 
+        message: emailResult.success
+          ? 'Branch and Manager account created. Activation email sent.'
           : 'Branch and Manager created, but activation email failed. Please check SMTP settings.',
         emailSuccess: emailResult.success,
         emailError: emailResult.error || null,
         branch,
-        user: { email: managerEmail, role: 'BranchManager' }
+        user: { email: managerEmail, role: 'BRANCH_MANAGER' }
       });
     } catch (error) {
       // Rollback Firebase user if it was created
