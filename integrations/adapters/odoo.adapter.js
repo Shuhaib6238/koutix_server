@@ -10,7 +10,9 @@ class OdooAdapter extends BasePOSAdapter {
         super(integration);
         // Normalize URL: remove trailing slash and common subpaths
         let url = (this.credentials.apiUrl || '').trim().replace(/\/$/, '');
-        url = url.replace(/\/(web|xmlrpc|jsonrpc)$/, '');
+
+        // Aggressively remove Odoo-specific path suffixes
+        url = url.split('/web')[0].split('/xmlrpc')[0].split('/jsonrpc')[0].split('/#')[0];
 
         if (url && !url.startsWith('http')) url = `https://${url}`;
         this.apiUrl = url;
@@ -31,12 +33,18 @@ class OdooAdapter extends BasePOSAdapter {
         try {
             const authUrl = `${this.apiUrl}/jsonrpc`;
             const resp = await axios.post(authUrl, {
-                jsonrpc: '2.0', method: 'call', id: 1,
+                jsonrpc: '2.0',
+                method: 'call',
+                id: 1,
                 params: {
-                    service: 'common', method: 'authenticate',
+                    service: 'common',
+                    method: 'authenticate',
                     args: [this.db, this.username, this.password, {}]
                 }
-            }, { timeout: 10000 });
+            }, {
+                timeout: 10000,
+                headers: { 'Content-Type': 'application/json' }
+            });
 
             if (resp.data.error) {
                 const msg = resp.data.error.data?.message || resp.data.error.message || 'Odoo Auth Error';
@@ -50,8 +58,11 @@ class OdooAdapter extends BasePOSAdapter {
             }
             return this.uid;
         } catch (err) {
+            if (err.response && err.response.status === 400) {
+                throw new Error(`Odoo returned 400 (Bad Request). This usually means the URL is slightly wrong or the server version requires XML-RPC instead of JSON-RPC. Try using the base domain only: ${this.apiUrl}`);
+            }
             if (err.response && err.response.status === 404) {
-                throw new Error(`Odoo API not found. Ensure your URL is correct (e.g., https://yourcompany.odoo.com). Do not include /web or /jsonrpc in the URL.`);
+                throw new Error(`Odoo API not found. Ensure your URL is correct. Currently trying: ${this.apiUrl}/jsonrpc`);
             }
             throw new Error(`Odoo Auth failed: ${err.message}`);
         }
@@ -61,12 +72,18 @@ class OdooAdapter extends BasePOSAdapter {
         const uid = await this._authenticate();
         try {
             const resp = await axios.post(`${this.apiUrl}/jsonrpc`, {
-                jsonrpc: '2.0', method: 'call', id: Date.now(),
+                jsonrpc: '2.0',
+                method: 'call',
+                id: Date.now(),
                 params: {
-                    service: 'object', method: 'execute_kw',
+                    service: 'object',
+                    method: 'execute_kw',
                     args: [this.db, uid, this.password, model, method, args, kwargs]
                 }
-            }, { timeout: 15000 });
+            }, {
+                timeout: 15000,
+                headers: { 'Content-Type': 'application/json' }
+            });
 
             if (resp.data.error) {
                 throw new Error(resp.data.error.data?.message || resp.data.error.message || 'Odoo RPC error');
