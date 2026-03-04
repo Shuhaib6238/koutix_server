@@ -12,7 +12,7 @@ class ChainController {
 
   async getDashboardStats(req, res) {
     try {
-      const orgId = req.user.org_id;
+      const orgId = req.user.org_id || req.user.tenantId;
       const role = req.user.role;
 
       if (role === 'ChainManager') {
@@ -33,7 +33,7 @@ class ChainController {
   async inviteBranchManager(req, res) {
     try {
       const { name, location, managerEmail, address } = req.body;
-      const org_id = req.user?.org_id;
+      const org_id = req.user.org_id || req.user.tenantId;
 
       if (!name || !location || !managerEmail) {
         return res.status(400).json({ message: 'Name, location, and managerEmail are required' });
@@ -110,7 +110,8 @@ class ChainController {
 
   async getBranches(req, res) {
     try {
-      const branches = await Branch.find({ org_id: req.user.org_id }).populate('manager_id');
+      const orgId = req.user.org_id || req.user.tenantId;
+      const branches = await Branch.find({ org_id: orgId }).populate('manager_id');
       res.status(200).json(branches);
     } catch (error) {
       res.status(400).json({ message: error.message });
