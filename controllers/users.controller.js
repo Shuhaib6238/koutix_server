@@ -57,6 +57,30 @@ class UserController {
       res.status(400).json({ message: error.message });
     }
   }
+  async getCustomers(req, res) {
+    try {
+      const User = require('../models/user.model');
+      const org_id = req.user.org_id;
+      const customers = await User.find({ role: 'CUSTOMER', org_id });
+      res.status(200).json(customers);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getStaff(req, res) {
+    try {
+      const User = require('../models/user.model');
+      const org_id = req.user.org_id;
+      const staff = await User.find({
+        org_id,
+        role: { $ne: 'CUSTOMER' }
+      });
+      res.status(200).json(staff);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 
 module.exports = new UserController();

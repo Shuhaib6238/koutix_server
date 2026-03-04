@@ -57,7 +57,9 @@ const IntegrationSchema = new mongoose.Schema({
         totalProductsSynced: { type: Number, default: 0 },
         totalOrdersPushed: { type: Number, default: 0 },
         totalErrors: { type: Number, default: 0 },
-        lastError: { type: String, default: null }
+        lastError: { type: String, default: null },
+        latencyMs: { type: Number, default: 0 },
+        queueBacklog: { type: Number, default: 0 }
     }
 }, {
     timestamps: true

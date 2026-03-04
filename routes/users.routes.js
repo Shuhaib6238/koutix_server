@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
   fileFilter: (req, file, cb) => {
@@ -37,5 +37,7 @@ router.get('/me', authMiddleware, (req, res) => {
 router.get('/profile/:id', userController.getProfile);
 router.put('/profile/:id', userController.updateProfile);
 router.post('/profile/:id/image', upload.single('image'), userController.uploadProfileImage);
+router.get('/customers', authMiddleware, userController.getCustomers);
+router.get('/staff', authMiddleware, userController.getStaff);
 
 module.exports = router;
