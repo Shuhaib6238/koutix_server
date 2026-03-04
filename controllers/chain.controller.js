@@ -116,6 +116,43 @@ class ChainController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  async getBranchDetails(req, res) {
+    try {
+      const branchId = req.params.id;
+      const orgId = req.user.org_id;
+
+      const branch = await Branch.findOne({ _id: branchId, org_id: orgId }).populate('manager_id');
+      if (!branch) return res.status(404).json({ message: 'Branch not found' });
+
+      // Fetch related data
+      const Product = require('../models/product.model');
+      const Transaction = require('../models/transaction.model');
+
+      const products = await Product.find({ org_id: orgId }).limit(10);
+      const orders = await Transaction.find({ branch_id: branchId }).sort({ createdAt: -1 }).limit(10);
+      const stats = await dashboardService.getBranchManagerStats(orgId, branchId);
+
+      // Map low stock
+      const inventory = products.filter(p => p.stock < (p.reorderLevel || 10));
+
+      res.status(200).json({
+        branch,
+        stats: {
+          salesToday: `$${stats.totalSales.toFixed(2)}`,
+          ordersToday: stats.transactions,
+          customers: Math.floor(stats.transactions * 0.8), // Mock logic until customer module fully linked
+          lowStock: inventory.length,
+          revenue: `$${(stats.totalSales * 30).toFixed(0)}` // Mock monthly
+        },
+        products,
+        orders,
+        inventory
+      });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 
 module.exports = new ChainController();
