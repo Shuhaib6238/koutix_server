@@ -13,12 +13,12 @@ class ChainController {
   async getDashboardStats(req, res) {
     try {
       const orgId = req.user.org_id || req.user.tenantId;
-      const role = req.user.role;
+      const role = req.user.role?.toUpperCase();
 
-      if (role === 'ChainManager') {
+      if (role === 'CHAIN_MANAGER' || role === 'CHAINMANAGER') {
         const stats = await dashboardService.getChainManagerStats(orgId);
         return res.status(200).json(stats);
-      } else if (role === 'BranchManager') {
+      } else if (role === 'BRANCH_MANAGER' || role === 'BRANCHMANAGER') {
         const branchId = req.user.branch_id;
         const stats = await dashboardService.getBranchManagerStats(orgId, branchId);
         return res.status(200).json(stats);

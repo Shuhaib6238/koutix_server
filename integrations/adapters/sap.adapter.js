@@ -63,17 +63,28 @@ class SAPAdapter extends BasePOSAdapter {
     async syncProducts(branchId) {
         let synced = 0, errors = 0;
         const products = [];
+        const endpoint = this.integration.settings?.productSyncEndpoint || '/http/koutix/products';
+        const fullUrl = `${this.apiUrl}${endpoint}`;
+
         try {
-            const resp = await this._request('GET', '/http/koutix/products');
+            console.log(`🚀 Starting SAP Product Sync from: ${fullUrl}`);
+            const resp = await this._request('GET', endpoint);
             const items = resp.data?.d?.results || resp.data?.items || resp.data || [];
+            
             for (const item of (Array.isArray(items) ? items : [])) {
                 try {
                     products.push(this.mapToKoutixProduct(item));
                     synced++;
-                } catch { errors++; }
+                } catch (err) { 
+                    errors++; 
+                    console.error(`  ⚠️ Failed to map item: ${item.Material || item.ItemCode}`, err.message);
+                }
             }
         } catch (err) {
-            throw new Error(`SAP product sync failed: ${err.message}`);
+            const status = err.response?.status || 'Error';
+            const message = `SAP product sync failed at [${fullUrl}] (Status: ${status}): ${err.message}`;
+            console.error(`❌ ${message}`);
+            throw new Error(message);
         }
         return { products, synced, errors };
     }
@@ -81,9 +92,14 @@ class SAPAdapter extends BasePOSAdapter {
     async syncInventory(branchId) {
         let synced = 0, errors = 0;
         const items = [];
+        const endpoint = this.integration.settings?.inventorySyncEndpoint || '/http/koutix/inventory';
+        const fullUrl = `${this.apiUrl}${endpoint}`;
+
         try {
-            const resp = await this._request('GET', '/http/koutix/inventory');
+            console.log(`🚀 Starting SAP Inventory Sync from: ${fullUrl}`);
+            const resp = await this._request('GET', endpoint);
             const data = resp.data?.d?.results || resp.data?.items || resp.data || [];
+            
             for (const item of (Array.isArray(data) ? data : [])) {
                 try {
                     items.push({
@@ -92,10 +108,15 @@ class SAPAdapter extends BasePOSAdapter {
                         sapMaterialId: item.Material || item.ItemCode,
                     });
                     synced++;
-                } catch { errors++; }
+                } catch (err) { 
+                    errors++; 
+                }
             }
         } catch (err) {
-            throw new Error(`SAP inventory sync failed: ${err.message}`);
+            const status = err.response?.status || 'Error';
+            const message = `SAP inventory sync failed at [${fullUrl}] (Status: ${status}): ${err.message}`;
+            console.error(`❌ ${message}`);
+            throw new Error(message);
         }
         return { items, synced, errors };
     }

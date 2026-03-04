@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const PromotionController = require('../controllers/promotions.controller');
-const authMiddleware = require('../middleware/authMiddleware');
+const authMiddleware = require('../middlewares/auth.middleware');
 
 router.use(authMiddleware);
 

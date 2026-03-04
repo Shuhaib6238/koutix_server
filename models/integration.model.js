@@ -37,7 +37,9 @@ const IntegrationSchema = new mongoose.Schema({
         autoProductSync: { type: Boolean, default: true },
         autoInventorySync: { type: Boolean, default: true },
         autoOrderPush: { type: Boolean, default: true },
-        syncIntervalMinutes: { type: Number, default: 10 }
+        syncIntervalMinutes: { type: Number, default: 10 },
+        productSyncEndpoint: { type: String, default: '/http/koutix/products' },
+        inventorySyncEndpoint: { type: String, default: '/http/koutix/inventory' }
     },
     lastSyncTime: {
         type: Date,
