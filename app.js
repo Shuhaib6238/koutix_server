@@ -39,6 +39,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/sap', sapRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/subscription', require('./routes/subscription.routes'));
+app.use('/api/integrations', require('./integrations/integration.routes'));
 
 app.get('/', (req, res) => {
   res.send('Koutix Server is running');

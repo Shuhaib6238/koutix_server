@@ -10,6 +10,9 @@ mongoose.connect(MONGO_URI)
     console.log('Connected to MongoDB');
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
+      // Start POS Integration Scheduler
+      const integrationScheduler = require('./integrations/integration.scheduler');
+      integrationScheduler.start().catch(err => console.error('Scheduler start error:', err.message));
     });
   })
   .catch((err) => {
