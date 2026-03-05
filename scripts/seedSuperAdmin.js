@@ -1,7 +1,7 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
-const admin = require("../config/firebase");
-const User = require("../models/user.model");
+const admin = require('../src/config/firebase');
+const User = require('../src/modules/users/user.model');
 
 // Load env vars
 const MONGO_URI = process.env.MONGO_URI;

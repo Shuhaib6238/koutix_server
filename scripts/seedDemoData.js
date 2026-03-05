@@ -1,9 +1,9 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
-const Product = require("../models/product.model");
-const Transaction = require("../models/transaction.model");
-const Organization = require("../models/organization.model");
-const Branch = require("../models/branch.model");
+const Product = require('../src/modules/products/product.model');
+const Transaction = require('../src/modules/orders/transaction.model');
+const Organization = require('../src/modules/tenants/organization.model');
+const Branch = require('../src/modules/branches/branch.model');
 
 const MONGO_URI = process.env.MONGO_URI;
 
