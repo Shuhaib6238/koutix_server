@@ -13,6 +13,11 @@ mongoose.connect(MONGO_URI)
       // Start POS Integration Scheduler
       const integrationScheduler = require('./integrations/integration.scheduler');
       integrationScheduler.start().catch(err => console.error('Scheduler start error:', err.message));
+
+      // Load Background Workers
+      require('./workers/integrationWorker');
+      require('./workers/analyticsWorker');
+      console.log('Background job workers initialized');
     });
   })
   .catch((err) => {

@@ -12,7 +12,7 @@ class OdooAdapter extends BasePOSAdapter {
         let url = (this.credentials.apiUrl || '').trim().replace(/\/$/, '');
 
         // Aggressively remove Odoo-specific path suffixes
-        url = url.split('/web')[0].split('/xmlrpc')[0].split('/jsonrpc')[0].split('/#')[0];
+        url = url.split('/web')[0].split('/xmlrpc')[0].split('/jsonrpc')[0].split('/odoo')[0].split('/#')[0];
 
         if (url && !url.startsWith('http')) url = `https://${url}`;
         this.apiUrl = url;

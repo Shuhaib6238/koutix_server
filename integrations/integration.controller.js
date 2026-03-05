@@ -1,4 +1,5 @@
 const integrationService = require('./integration.service');
+const { addSyncJob } = require('../queues/integrationQueue');
 
 /**
  * IntegrationController — REST API endpoints for POS integration management
@@ -98,8 +99,8 @@ class IntegrationController {
     async syncProducts(req, res) {
         try {
             const { branchId } = req.body;
-            const result = await integrationService.syncProducts(req.params.id, branchId);
-            res.status(200).json({ message: 'Product sync completed', ...result });
+            const job = await addSyncJob(req.params.id, 'products', branchId);
+            res.status(202).json({ message: 'Product sync queued successfully', jobId: job.id });
         } catch (err) {
             res.status(400).json({ message: err.message });
         }
@@ -108,8 +109,8 @@ class IntegrationController {
     async syncInventory(req, res) {
         try {
             const { branchId } = req.body;
-            const result = await integrationService.syncInventory(req.params.id, branchId);
-            res.status(200).json({ message: 'Inventory sync completed', ...result });
+            const job = await addSyncJob(req.params.id, 'inventory', branchId);
+            res.status(202).json({ message: 'Inventory sync queued successfully', jobId: job.id });
         } catch (err) {
             res.status(400).json({ message: err.message });
         }

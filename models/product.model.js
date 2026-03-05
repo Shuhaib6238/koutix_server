@@ -40,6 +40,14 @@ const ProductSchema = new mongoose.Schema({
   org_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Organization'
+  },
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization'
+  },
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch'
   }
 }, {
   timestamps: true
