@@ -1,22 +1,27 @@
 const { Queue } = require('bullmq');
 const connection = {
     host: process.env.REDIS_HOST || '127.0.0.1',
-    port: process.env.REDIS_PORT || 6379,
-    // username: process.env.REDIS_USER,
-    // password: process.env.REDIS_PASSWORD
+    port: parseInt(process.env.REDIS_PORT) || 6379,
 };
 
-// Define queue for POS Synchronization
-const syncQueue = new Queue('pos-sync-queue', { connection });
+// Define queue lazily to avoid connection on import
+let syncQueue = null;
 
-/**
- * Add a sync job to the queue
- * @param {string} integrationId 
- * @param {string} type - 'products' or 'inventory'
- * @param {string} branchId 
- */
+function getSyncQueue() {
+    if (!syncQueue && process.env.USE_REDIS === 'true') {
+        syncQueue = new Queue('pos-sync-queue', { connection });
+    }
+    return syncQueue;
+}
+
 async function addSyncJob(integrationId, type, branchId = null) {
-    return await syncQueue.add(`sync-${type}`, {
+    const queue = getSyncQueue();
+    if (!queue) {
+        console.warn(`⚠️ Redis is disabled. Skipping background job for sync-${type}.`);
+        return { id: 'no-redis-mock-id' };
+    }
+
+    return await queue.add(`sync-${type}`, {
         integrationId,
         type,
         branchId

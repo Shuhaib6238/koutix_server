@@ -1,21 +1,27 @@
 const { Queue } = require('bullmq');
 const connection = {
     host: process.env.REDIS_HOST || '127.0.0.1',
-    port: process.env.REDIS_PORT || 6379,
-    // username: process.env.REDIS_USER,
-    // password: process.env.REDIS_PASSWORD
+    port: parseInt(process.env.REDIS_PORT) || 6379,
 };
 
-// Define queue for Analytics Aggregation
-const analyticsQueue = new Queue('analytics-queue', { connection });
+// Define queue lazily to avoid connection on import
+let analyticsQueue = null;
 
-/**
- * Add an analytics job to the queue
- * @param {string} tenantId 
- * @param {string} type - 'daily_sales', 'branch_metrics'
- */
+function getAnalyticsQueue() {
+    if (!analyticsQueue && process.env.USE_REDIS === 'true') {
+        analyticsQueue = new Queue('analytics-queue', { connection });
+    }
+    return analyticsQueue;
+}
+
 async function addAnalyticsJob(tenantId, type) {
-    return await analyticsQueue.add(`analytics-${type}`, {
+    const queue = getAnalyticsQueue();
+    if (!queue) {
+        console.warn(`⚠️ Redis is disabled. Skipping analytics job: ${type}.`);
+        return { id: 'no-redis-mock-id' };
+    }
+
+    return await queue.add(`analytics-${type}`, {
         tenantId,
         type
     }, {

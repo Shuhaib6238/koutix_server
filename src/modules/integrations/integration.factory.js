@@ -1,7 +1,7 @@
 const SAPAdapter = require('./adapters/sap.adapter');
 const OdooAdapter = require('./adapters/odoo.adapter');
 const GenericAdapter = require('./adapters/generic.adapter');
-const ManualAdapter = require('../../../integrations/adapters/manual.adapter');
+const ManualAdapter = require('./adapters/manual.adapter');
 
 /**
  * IntegrationFactory — returns the correct POS adapter based on integrationType
