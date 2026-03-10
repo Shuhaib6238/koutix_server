@@ -44,6 +44,13 @@ app.use(
 const webhookRoutes = require("./src/routes/webhook.routes");
 app.use("/webhooks", webhookRoutes);
 
+const paymentController = require("./src/controllers/payment.controller");
+app.post(
+  "/payments/webhook/:storeId",
+  express.raw({ type: "application/json" }),
+  paymentController.webhook,
+);
+
 // ─── Body Parsing ────────────────────────────────────────
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -99,8 +106,8 @@ const posRoutes = require("./src/routes/pos.routes");
 app.use("/pos", posRoutes);
 
 // TODO:RASHID — Add these route mounts:
-// app.use('/payments', paymentRoutes); — Payment processing routes
-// app.use('/refunds', refundRoutes); — Refund handling routes
+const paymentRoutes = require("./src/routes/payment.routes");
+app.use("/payments", paymentRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────
 app.use("*", (req, res) => {
