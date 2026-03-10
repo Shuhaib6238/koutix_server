@@ -1,74 +1,80 @@
-const jwtService = require('../modules/auth/jwt.service');
-const User = require('../modules/users/user.model');
-const admin = require('../config/firebase');
+/**
+ * @file Firebase token verification middleware.
+ * Verifies the Firebase ID token from the Authorization header.
+ * Attaches decoded token (uid, role, accountType) to req.user.
+ */
+const { getAuth } = require("../config/firebase");
+const { error } = require("../utils/response");
+const logger = require("../utils/logger");
 
 /**
- * authMiddleware — Combined verifyToken + attachUser
- * 
- * Middleware Stack Order:
- * 1. verifyFirebaseToken (or server JWT)
- * 2. attachUser (find MongoDB user)
- * 3. checkSubscription (if PARTNER)
- * 4. authorize(roles)
- * 5. tenantGuard
- * 
- * This middleware handles steps 1 + 2:
- * - Tries server JWT first (faster, no network call)
- * - Falls back to Firebase ID Token verification
- * - Loads full user from MongoDB and attaches to req.user
+ * Middleware: Verify Firebase ID token.
+ * Expects header: Authorization: Bearer <idToken>
  */
-const authMiddleware = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Unauthorized: No token provided' });
-  }
-
-  const token = authHeader.split(' ')[1];
-
+async function authenticate(req, res, next) {
   try {
-    let user;
-
-    // 1. Try verifying as custom server JWT (fast path)
-    const decoded = jwtService.verify(token);
-
-    if (decoded && decoded.id) {
-      user = await User.findById(decoded.id)
-        .populate('tenantId')
-        .populate('branchId');
-    } else {
-      // 2. Fallback: Try verifying as Firebase ID Token
-      try {
-        const decodedFirebaseToken = await admin.auth().verifyIdToken(token);
-        user = await User.findOne({ firebaseUid: decodedFirebaseToken.uid })
-          .populate('tenantId')
-          .populate('branchId');
-
-        // Attach Firebase data for downstream use
-        req.firebaseUser = decodedFirebaseToken;
-      } catch (firebaseError) {
-        return res.status(401).json({
-          message: 'Unauthorized: Invalid token',
-          error: 'Token is neither a valid server JWT nor a valid Firebase ID token'
-        });
-      }
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return error(res, {
+        statusCode: 401,
+        message: "Missing or invalid Authorization header",
+      });
     }
 
-    if (!user) {
-      return res.status(401).json({ message: 'Unauthorized: User not found' });
+    const idToken = authHeader.split("Bearer ")[1];
+    if (!idToken) {
+      return error(res, { statusCode: 401, message: "Token not provided" });
     }
 
-    if (!user.isActive || user.status === 'inactive') {
-      return res.status(403).json({ message: 'Forbidden: Account is not active' });
-    }
+    const decoded = await getAuth().verifyIdToken(idToken);
 
-    // Attach full user object to request
-    req.user = user;
+    // Attach user info from token claims
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email || null,
+      role: decoded.role || "customer",
+      accountType: decoded.accountType || null,
+      chainId: decoded.chainId || null,
+      storeId: decoded.storeId || null,
+    };
+
     next();
-  } catch (error) {
-    console.error('Auth Middleware Error:', error.message);
-    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  } catch (err) {
+    logger.error(`Auth middleware error: ${err.message}`);
+    if (err.code === "auth/id-token-expired") {
+      return error(res, {
+        statusCode: 401,
+        message: "Token expired — please re-authenticate",
+      });
+    }
+    return error(res, { statusCode: 401, message: "Invalid or expired token" });
   }
-};
+}
 
-module.exports = authMiddleware;
+/**
+ * Optional auth — sets req.user if token present, but doesn't block.
+ */
+async function optionalAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      req.user = null;
+      return next();
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    const decoded = await getAuth().verifyIdToken(idToken);
+
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email || null,
+      role: decoded.role || "customer",
+      accountType: decoded.accountType || null,
+    };
+  } catch {
+    req.user = null;
+  }
+  next();
+}
+
+module.exports = { authenticate, optionalAuth };

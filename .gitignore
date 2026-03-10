@@ -1,11 +1,4 @@
 node_modules/
 .env
-.DS_Store
-src/config/firebase-adminsdk.json
-combined.log
-error.log
+logs/
 *.log
-dist/
-build/
-.vscode/
-.idea/
