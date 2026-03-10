@@ -158,6 +158,20 @@ curl http://localhost:8080/health
 | PATCH  | `/admin/users/:id/role`          | Update user role       |
 | GET    | `/admin/promotions`              | Promoted stores        |
 
+### Orders & Payments (Rashid)
+
+| Method | Path                         | Description                           |
+| ------ | ---------------------------- | ------------------------------------- |
+| POST   | `/orders`                    | Create order (atomic stock deduction) |
+| GET    | `/orders/my`                 | List customer's own orders            |
+| GET    | `/orders/:id`                | Get order details (IDOR protected)    |
+| GET    | `/orders/:id/receipt`        | Get JSON digital receipt for PDF      |
+| PATCH  | `/orders/:id/status`         | Update order status + FCM push        |
+| POST   | `/payments/session`          | Create checkout/stripe session        |
+| POST   | `/payments/verify`           | Verify payment API status             |
+| POST   | `/payments/refund/:orderId`  | Process payment refund                |
+| POST   | `/payments/webhook/:storeId` | Per-store webhook (express.raw)       |
+
 ### Common
 
 | Method | Path                    | Description    |
@@ -168,7 +182,7 @@ curl http://localhost:8080/health
 ## Developers
 
 - **Shuhaib** (Backend 1) — Foundation, auth, chain, store, admin, POS, Stripe
-- **Rashid** (Backend 2) — Orders, payments, refunds (see `TODO:RASHID` markers)
+- **Rashid** (Backend 2) — Orders, payments, refunds (Implemented)
 
 ## License
 

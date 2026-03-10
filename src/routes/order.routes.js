@@ -1,26 +1,51 @@
 /**
- * @file Order routes — order status update (used across branch + webhook).
- * TODO:RASHID — Add full order flow routes here.
+ * @file Order routes
  */
 const { Router } = require("express");
 const { authenticate } = require("../middleware/auth.middleware");
 const { requireRole } = require("../middleware/role.middleware");
-const branchController = require("../controllers/branch.controller");
+const orderController = require("../controllers/order.controller");
 
 const router = Router();
 
-// Branch manager: update order status
+// Create order - customers only
+router.post(
+  "/",
+  authenticate,
+  requireRole("customer"),
+  orderController.createOrder,
+);
+
+// Get my orders - customers only
+router.get(
+  "/my",
+  authenticate,
+  requireRole("customer"),
+  orderController.getMyOrders,
+);
+
+// Get order by id - customer or branchManager
+router.get(
+  "/:id",
+  authenticate,
+  requireRole("customer", "branchManager", "chainManager"),
+  orderController.getOrderById,
+);
+
+// Get digital receipt
+router.get(
+  "/:id/receipt",
+  authenticate,
+  requireRole("customer", "branchManager"),
+  orderController.getDigitalReceipt,
+);
+
+// Update status - branchManager or customer (cancel)
 router.patch(
   "/:id/status",
   authenticate,
-  requireRole("branchManager", "chainManager"),
-  branchController.updateOrderStatus,
+  requireRole("customer", "branchManager", "superAdmin"),
+  orderController.updateOrderStatus,
 );
-
-// TODO:RASHID — Add these routes:
-// POST /orders — Create new order (customer)
-// GET /orders/:id — Get order details
-// POST /orders/:id/pay — Process payment
-// POST /orders/:id/refund — Process refund
 
 module.exports = router;

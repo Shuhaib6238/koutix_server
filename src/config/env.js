@@ -79,7 +79,11 @@ const env = cleanEnv(process.env, {
   ALLOWED_ORIGINS: str({ default: "https://admin.koutix.com" }),
 
   // ─── Frontend URL (for invite links) ──────────────────
-  FRONTEND_URL: str({ default: "https://admin.koutix.com" }),
+  // ─── RASHID ────────────────────────────────────────────
+  CHECKOUT_API_URL: str({
+    desc: "Checkout.com API URL (sandbox or live)",
+    default: "https://api.sandbox.checkout.com",
+  }),
 });
 
 module.exports = env;
