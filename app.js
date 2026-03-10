@@ -1,67 +1,116 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const path = require('path');
-const rateLimit = require('express-rate-limit');
-const logger = require('./src/utils/logger');
+/**
+ * @file Express application — main entry point.
+ * @description Mounts all middleware, routes, and error handler.
+ * TODO:RASHID markers show where Rashid will add order/payment routes.
+ */
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const hpp = require("hpp");
+const morgan = require("morgan");
+const mongoSanitize = require("express-mongo-sanitize");
+const logger = require("./src/utils/logger");
+const { apiLimiter } = require("./src/middleware/rateLimiter.middleware");
+const { errorHandler } = require("./src/middleware/error.middleware");
 
 const app = express();
 
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after 15 minutes'
-});
-app.use('/api/', limiter);
-
-// Middlewares
-app.use(cors());
+// ─── Security Middleware ─────────────────────────────────
 app.use(helmet());
-app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
-// 1. Webhooks (Must be before express.json middleware for raw body)
-const webhookRoutes = require('./src/modules/billing/webhook.routes');
-app.use('/api/webhooks', webhookRoutes);
+app.use(hpp());
+app.use(mongoSanitize());
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ─── CORS ────────────────────────────────────────────────
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5173")
+  .split(",")
+  .map((o) => o.trim());
 
-// Static folder for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  }),
+);
 
-// Routes
-const authRoutes = require('./src/modules/auth/auth.routes');
-const superAdminRoutes = require('./src/modules/admin/superadmin.routes');
-const chainRoutes = require('./src/modules/analytics/chain.routes');
-const storeRoutes = require('./src/modules/branches/stores.routes');
-const usersRoutes = require('./src/modules/users/users.routes');
-const adminRoutes = require('./src/modules/admin/admin.routes');
-const sapRoutes = require('./src/modules/integrations/sap.routes');
-const productsRoutes = require('./src/modules/products/products.routes');
+// ─── Logging ─────────────────────────────────────────────
+app.use(
+  morgan("combined", {
+    stream: { write: (message) => logger.info(message.trim()) },
+  }),
+);
 
-app.use('/api/auth', authRoutes);
-app.use('/api/superadmin', superAdminRoutes);
-app.use('/api/chain', chainRoutes);
-app.use('/api/stores', storeRoutes);
-app.use('/api/users', usersRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/sap', sapRoutes);
-app.use('/api/products', productsRoutes);
-app.use('/api/transactions', require('./src/modules/orders/transactions.routes'));
-app.use('/api/subscription', require('./src/modules/billing/subscription.routes'));
-app.use('/api/integrations', require('./src/modules/integrations/integration.routes'));
-app.use('/api/promotions', require('./src/modules/promotions/promotions.routes'));
+// ─── Webhooks — MUST be before express.json() ────────────
+const webhookRoutes = require("./src/routes/webhook.routes");
+app.use("/webhooks", webhookRoutes);
 
-app.get('/', (req, res) => {
-  res.send('Koutix Server is running');
+// ─── Body Parsing ────────────────────────────────────────
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// ─── Rate Limiting ───────────────────────────────────────
+app.use(apiLimiter);
+
+// ─── Health Check ────────────────────────────────────────
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  logger.error(`${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
-  logger.error(err.stack);
-  res.status(500).json({ message: 'Internal Server Error' });
+// ─── Auth Routes (Public) ────────────────────────────────
+const authRoutes = require("./src/routes/auth.routes");
+app.use("/auth", authRoutes);
+
+// ─── Store Routes (Public + Customer) ────────────────────
+const storeRoutes = require("./src/routes/store.routes");
+app.use("/stores", storeRoutes);
+
+// ─── Product Routes (Customer) ───────────────────────────
+const productRoutes = require("./src/routes/product.routes");
+app.use("/products", productRoutes);
+
+// ─── Chain Manager Routes ────────────────────────────────
+const chainRoutes = require("./src/routes/chain.routes");
+app.use("/chain", chainRoutes);
+
+// ─── Branch Manager Routes ───────────────────────────────
+const branchRoutes = require("./src/routes/branch.routes");
+app.use("/branch", branchRoutes);
+
+// ─── Order Routes ────────────────────────────────────────
+// TODO:RASHID — Implement full order creation, payment, and refund routes
+const orderRoutes = require("./src/routes/order.routes");
+app.use("/orders", orderRoutes);
+
+// ─── Admin Routes (Super Admin) ──────────────────────────
+const adminRoutes = require("./src/routes/admin.routes");
+app.use("/admin", adminRoutes);
+
+// ─── Upload Routes ───────────────────────────────────────
+const uploadRoutes = require("./src/routes/upload.routes");
+app.use("/upload", uploadRoutes);
+
+// ─── POS Routes ──────────────────────────────────────────
+const posRoutes = require("./src/routes/pos.routes");
+app.use("/pos", posRoutes);
+
+// TODO:RASHID — Add these route mounts:
+// app.use('/payments', paymentRoutes); — Payment processing routes
+// app.use('/refunds', refundRoutes); — Refund handling routes
+
+// ─── 404 Handler ─────────────────────────────────────────
+app.use("*", (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
 });
+
+// ─── Global Error Handler ────────────────────────────────
+app.use(errorHandler);
 
 module.exports = app;

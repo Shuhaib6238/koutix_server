@@ -1,36 +1,33 @@
 /**
- * authorize(roles) — Step 4 of middleware stack
- * 
- * Checks if the authenticated user has one of the allowed roles.
- * Supports both new (UPPER_CASE) and legacy (PascalCase) role formats.
+ * @file Role-based access control middleware.
+ * Role is taken from Firebase custom claims via req.user (set by auth middleware).
+ * NEVER from request body.
  */
-const roleMiddleware = (roles) => {
+const { error } = require("../utils/response");
+
+/**
+ * Require one or more roles for access.
+ * @param {...string} allowedRoles - e.g. 'superAdmin', 'chainManager'
+ * @returns {import('express').RequestHandler}
+ */
+function requireRole(...allowedRoles) {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ message: 'Unauthorized' });
+      return error(res, {
+        statusCode: 401,
+        message: "Authentication required",
+      });
     }
 
-    // Normalize roles for comparison — support both old and new format
-    const roleMap = {
-      'SuperAdmin': 'SUPER_ADMIN',
-      'ChainManager': 'CHAIN_MANAGER',
-      'BranchManager': 'BRANCH_MANAGER',
-      'user': 'CUSTOMER',
-      'SUPER_ADMIN': 'SUPER_ADMIN',
-      'CHAIN_MANAGER': 'CHAIN_MANAGER',
-      'BRANCH_MANAGER': 'BRANCH_MANAGER',
-      'CUSTOMER': 'CUSTOMER'
-    };
-
-    const userNormalizedRole = roleMap[req.user.role] || req.user.role;
-    const normalizedAllowed = roles.map(r => roleMap[r] || r);
-
-    if (!normalizedAllowed.includes(userNormalizedRole) && !roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+    if (!allowedRoles.includes(req.user.role)) {
+      return error(res, {
+        statusCode: 403,
+        message: `Access denied. Required role: ${allowedRoles.join(" or ")}`,
+      });
     }
 
     next();
   };
-};
+}
 
-module.exports = roleMiddleware;
+module.exports = { requireRole };
